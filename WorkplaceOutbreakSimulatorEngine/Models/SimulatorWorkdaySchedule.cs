@@ -4,8 +4,7 @@ using System.Text;
 
 namespace WorkplaceOutbreakSimulatorEngine.Models
 {
-    public class SimulationVirus
+    public class SimulatorWorkdaySchedule
     {
-
     }
 }

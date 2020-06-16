@@ -14,7 +14,7 @@ namespace WorkplaceOutbreakSimulatorEngine
 
         }
 
-        public SimulationResult Run()
+        public SimulatorResult Run()
         {
             throw new NotImplementedException();
         }

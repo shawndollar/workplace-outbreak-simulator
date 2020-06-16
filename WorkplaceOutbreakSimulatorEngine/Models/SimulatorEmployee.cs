@@ -4,11 +4,11 @@ using System.Text;
 
 namespace WorkplaceOutbreakSimulatorEngine.Models
 {
-    public class SimulationEmployee
+    public class SimulatorEmployee
     {
-        public SimulationWorkplaceRoom WorkplaceRoom { get; set; }
+        public SimulatorWorkplaceRoom WorkplaceRoom { get; set; }
 
-        public SimulationEmployeeGender Gender { get; set; }
+        public SimulatorEmployeeGender Gender { get; set; }
 
         public string FirstName { get; set; }
 

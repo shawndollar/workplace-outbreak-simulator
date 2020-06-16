@@ -4,8 +4,8 @@ using System.Text;
 
 namespace WorkplaceOutbreakSimulatorEngine.Models
 {
-    public class SimulationWorkplaceRoom
+    public class SimulatorResult
     {
-        public int FloorNumber { get; set; }
+
     }
 }

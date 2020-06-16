@@ -4,9 +4,8 @@ using System.Text;
 
 namespace WorkplaceOutbreakSimulatorEngine.Models
 {
-    public class SimulationTimeframe
+    public class SimulatorEmployeeContact
     {
-        public int StartDate { get; set; }
-        public int EndDate { get; set; }
+
     }
 }

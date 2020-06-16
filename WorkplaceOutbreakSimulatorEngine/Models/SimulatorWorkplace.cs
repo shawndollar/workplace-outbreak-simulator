@@ -4,8 +4,9 @@ using System.Text;
 
 namespace WorkplaceOutbreakSimulatorEngine.Models
 {
-    public class SimulationResult
+    public class SimulatorWorkplace
     {
+        public IList<SimulatorWorkplaceRoom> WorkplaceRoom { get; set; }
 
     }
 }

@@ -4,7 +4,9 @@ using System.Text;
 
 namespace WorkplaceOutbreakSimulatorEngine.Models
 {
-    public class SimulationWorkdaySchedule
+    public class SimulatorTimeframe
     {
+        public int StartDate { get; set; }
+        public int EndDate { get; set; }
     }
 }
