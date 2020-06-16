@@ -6,6 +6,12 @@ namespace WorkplaceOutbreakSimulatorEngine.Models
 {
     public class SimulatorWorkplaceRoom
     {
-        public int FloorNumber { get; set; }
+        public int Id { get; set; }
+
+        public int FloorId { get; set; }
+
+        public int RoomNumber { get; set; }
+
+        public string RoomType { get; set; }
     }
 }

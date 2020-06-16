@@ -11,9 +11,9 @@ namespace WorkplaceOutbreakSimulatorEngine
 
         public SimulatorEngine(SimulatorConfiguration configuration)
         {
-
+            Configuration = configuration;
         }
-
+        
         public SimulatorResult Run()
         {
             throw new NotImplementedException();
