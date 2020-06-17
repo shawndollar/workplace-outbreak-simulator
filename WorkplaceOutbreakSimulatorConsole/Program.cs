@@ -17,13 +17,31 @@ namespace WorkplaceOutbreakSimulatorConsole
     {
         public static async Task Main(string[] args)
         {
-            SimulatorConfiguration simConfig = await CreateConfiguration();
+            bool useTestPersonFile = true;
+            int attempts = 1;
+
+            SimulatorConfiguration simConfig = await CreateConfiguration(useTestPersonFile);
             SimulatorEngine simEngine = new SimulatorEngine(simConfig);
-            SimulatorResult result = simEngine.Run();
-            Console.WriteLine("Status " + !result.HasError + " " + result.ErrorMessage);
+
+            for (int i = 0; i < attempts; i++)
+            {
+                Console.WriteLine($"Run {i + 1}");
+                SimulatorResult result = simEngine.Run();
+                Console.WriteLine("Status " + !result.HasError + " " + result.ErrorMessage);
+                if (!result.HasError)
+                {
+                    Console.WriteLine("Complete Infection Time " + result.CompleteInfectionDateTime);
+                    Console.WriteLine("Total Infected: " + (from e in simConfig.Employees
+                                                            join v in simConfig.VirusStages
+                                                            on e.VirusStageId equals v.Id
+                                                            where v.IsInfected
+                                                            select e).Count());
+                }
+                Console.WriteLine();
+            }
         }
 
-        static async Task<SimulatorConfiguration> CreateConfiguration()
+        static async Task<SimulatorConfiguration> CreateConfiguration(bool useTestPersonFile)
         {
             SimulatorDataStore simDataStore = new SimulatorDataStore("https://api.mockaroo.com/api/f028dfc0", "89c948e0");
 
@@ -90,10 +108,15 @@ namespace WorkplaceOutbreakSimulatorConsole
             simConfig.WorkplaceRooms.AddRooms(simConfig.WorkplaceFloors.First(f => f.FloorNumber == 5).Id, 1, SimulatorDataConstant.WorkplaceRoomType_Breakroom);
             simConfig.WorkplaceRooms.AddRooms(simConfig.WorkplaceFloors.First(f => f.FloorNumber == 5).Id, 2, SimulatorDataConstant.WorkplaceRoomType_Meeting);
 
-            simConfig.Employees = await GetEmployeesAsync(simDataStore, 530, true);
+            simConfig.Employees = await GetEmployeesAsync(simDataStore, floorNumberPeopleCountDict.Sum(f => f.Value), useTestPersonFile);
 
-            SetEmployeesBreakroomUse(simConfig.Employees, .25m); // mark employees who will use break room
+            // mark employees who will use break room
+            SetEmployeesBreakroomUse(simConfig.Employees, .25m);
 
+            // set all employees to well first
+            SetInitialWellEmployees(simConfig.Employees, simConfig.VirusStages);
+
+            // now set the sick employee(s)
             {
                 int virusStageId = simConfig.VirusStages.FirstOrDefault(f => f.InfectionStage == simConfig.InitialSickStage).Id;
                 SetInitialInfectedEmployees(simConfig.Employees, simConfig.InitialSickCount, virusStageId, simConfig.StartDateTime);
@@ -102,7 +125,6 @@ namespace WorkplaceOutbreakSimulatorConsole
             AssignEmployeesToOffices(simConfig.WorkplaceFloors, simConfig.WorkplaceRooms.Where(f => f.RoomType == SimulatorDataConstant.WorkplaceRoomType_Office).ToList(), floorNumberPeopleCountDict, simConfig.Employees);
             
             return simConfig;
-
         }
 
         static void SetEmployeesBreakroomUse(IList<SimulatorEmployee> employees, decimal breakroomPercentage)
@@ -214,6 +236,15 @@ namespace WorkplaceOutbreakSimulatorConsole
             return virusStages;
         }
 
+        static void SetInitialWellEmployees(IList<SimulatorEmployee> employees, IList<SimulatorVirusStage> virusStages)
+        {
+            int virusStageId = virusStages.FirstOrDefault(f => f.InfectionStage == SimulatorDataConstant.InfectionStage_Well).Id;
+            foreach (var employee in employees)
+            {
+                employee.VirusStageId = virusStageId;
+            }
+        }
+
         static async Task<IList<SimulatorEmployee>> GetEmployeesAsync(SimulatorDataStore simDataStore, int count, bool getFromFile)
         {
             string employeesJson = null;
@@ -236,6 +267,7 @@ namespace WorkplaceOutbreakSimulatorConsole
             }
 
             var results = JsonSerializer.Deserialize<IList<SimulatorEmployee>>(employeesJson);
+
             if (results.Count > count)
             {
                 results = results.Take(count).ToList();

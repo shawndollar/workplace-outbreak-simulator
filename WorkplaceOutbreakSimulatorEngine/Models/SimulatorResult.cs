@@ -6,10 +6,13 @@ namespace WorkplaceOutbreakSimulatorEngine.Models
 {
     public class SimulatorResult
     {
-        IList<SimulatorEmployeeContact> EmployeeContacts { get; set; } = new List<SimulatorEmployeeContact>();
+        public IList<SimulatorEmployeeContact> EmployeeContacts { get; set; } = new List<SimulatorEmployeeContact>();
+
+        public DateTime? CompleteInfectionDateTime { get; set; }
 
         public bool HasError { get; set; }
 
-        public string ErrorMessage { get; set; }
+        public string ErrorMessage { get; set; }                
+
     }
 }

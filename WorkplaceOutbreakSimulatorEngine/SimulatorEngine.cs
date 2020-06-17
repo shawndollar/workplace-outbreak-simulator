@@ -77,6 +77,10 @@ namespace WorkplaceOutbreakSimulatorEngine
                     TestSickEmployees();
                     UpdateEmployeesLocations();
                     SpreadTheVirus();
+                    if (result.CompleteInfectionDateTime == null && IsInfectionComplete())
+                    {
+                        result.CompleteInfectionDateTime = SimulatorDateTime;
+                    }
                     AdvanceSimulatorDateTime();
                 }
             }
@@ -95,9 +99,9 @@ namespace WorkplaceOutbreakSimulatorEngine
         /// </summary>
         public void SpreadTheVirus()
         {
-            foreach (var infectedEmployee in Configuration.Employees.Where(f => !f.IsOutSick && IsEmployeeContagious(f)))
+            foreach (var infectedEmployee in Configuration.Employees.Where(f => !f.IsOutSick && IsEmployeeContagious(f)).ToList())
             {
-                var contactedEmployees = Configuration.Employees.Where(f => !f.IsOutSick && f.CurrentRoomId == infectedEmployee.CurrentRoomId && IsEmployeeWell(f));
+                var contactedEmployees = Configuration.Employees.Where(f => !f.IsOutSick && f.CurrentRoomId == infectedEmployee.CurrentRoomId && IsEmployeeWell(f)).ToList();
                 foreach (var contactedEmployee in contactedEmployees)
                 {
                     if (DoSpreadVirus())
@@ -159,7 +163,7 @@ namespace WorkplaceOutbreakSimulatorEngine
         {
             foreach (var employee in Configuration.Employees.Where(f => !f.IsOutSick && IsEmployeeSick(f)))
             {
-                if (DoTestEmployee())
+                if (DoTestEmployee(employee))
                 {
                     employee.InfectionTestDateTime = SimulatorDateTime;
                     employee.InfectiontTestResult = SimulatorDataConstant.InfectionTestResult_Pending;
@@ -391,10 +395,17 @@ namespace WorkplaceOutbreakSimulatorEngine
 
         /// <summary>
         /// Determine whether to issue a test based on test rate.
-        /// </summary>
         /// <returns>Return true if a test should be issued.</returns>
-        private bool DoTestEmployee()
+        /// </summary>
+        /// <param name="employee">The employee to test or not test.</param>
+        /// <returns>Return true if a test should be issued.</returns>
+        private bool DoTestEmployee(SimulatorEmployee employee)
         {
+            // Don't test if already waiting for test result.
+            if (employee.InfectiontTestResult == SimulatorDataConstant.InfectionTestResult_Pending)
+            {
+                return false;
+            }
             // Pick a random number between 1 and 1000 and see if it's within our test rate. 
             // Example: There is a 25% (.25*1000) chance that the number will be between 1 and 250.
             // Multiply by 1000 instead of 100 just in case test rate is has thousandths place (which is very likely). It'll be more exact.
@@ -505,6 +516,17 @@ namespace WorkplaceOutbreakSimulatorEngine
                 number = _random.Next(min, max);
             }
             return number;
+        }
+
+        public bool IsInfectionComplete()
+        {
+            int totalInfected = (from e in Configuration.Employees
+                                 join v in Configuration.VirusStages
+                                 on e.VirusStageId equals v.Id
+                                 where v.IsInfected
+                                 select e).Count();
+
+            return totalInfected == Configuration.Employees.Count;
         }
 
         #endregion Methods
