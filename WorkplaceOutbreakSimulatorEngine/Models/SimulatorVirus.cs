@@ -22,6 +22,8 @@ namespace WorkplaceOutbreakSimulatorEngine.Models
 
         public int RecoveryDays { get; set; }
 
+        public TimeSpan TestResultWaitTime { get; set; }
+
         public override string ToString()
         {
             return $"{Id} {InfectionRate} {TestRate} {RecoveryDays}";

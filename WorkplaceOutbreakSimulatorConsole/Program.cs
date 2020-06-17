@@ -19,6 +19,8 @@ namespace WorkplaceOutbreakSimulatorConsole
         {
             SimulatorConfiguration simConfig = await CreateConfiguration();
             SimulatorEngine simEngine = new SimulatorEngine(simConfig);
+            simEngine.Run();
+
         }
 
         static async Task<SimulatorConfiguration> CreateConfiguration()
@@ -91,37 +93,11 @@ namespace WorkplaceOutbreakSimulatorConsole
 
             SetEmployeesBreakroomUse(simConfig.Employees, .25m); // mark employees who will use break room
 
-            Console.WriteLine(simConfig.Employees.Count(f => f.IsBreakroomUser));
-
             AssignEmployeesToOffices(simDataStore, simConfig.WorkplaceFloors, simConfig.WorkplaceRooms.Where(f => f.RoomType == SimulatorDataConstant.WorkplaceRoomType_Office).ToList(), floorNumberPeopleCountDict, simConfig.Employees);
             
             return simConfig;
 
         }
-
-        //static void InitializeEmployeesViralStatus(SimulatorDataStore simDataStore, IList<SimulatorEmployee> employees, IList<SimulatorVirusStage> virusStages, int initialSickCount, int initialSickVirusStageId, DateTime changeDateTime)
-        //{
-        //    int initialVirusStageId = virusStages.OrderBy(f => f.StageOrder).First().Id;
-
-        //    foreach (var item in employees)
-        //    {
-        //        item.VirusStageId = initialVirusStageId;
-        //    }
-
-        //    int sickCount = 0;
-
-        //    do
-        //    {
-        //        int sickEmployeeIndex = simDataStore.GetRandomNumber(0, employees.Count);
-        //        if (employees[sickEmployeeIndex].VirusStageId != initialSickVirusStageId)
-        //        {
-        //            employees[sickEmployeeIndex].VirusStageId = initialSickVirusStageId;
-        //            employees[sickEmployeeIndex].VirusStageLastChangeDateTime = changeDateTime;
-        //            sickCount++;
-        //        }
-        //    } while (sickCount < initialSickCount);
-
-        //}
 
         static void SetEmployeesBreakroomUse(IList<SimulatorEmployee> employees, decimal breakroomPercentage)
         {
@@ -176,9 +152,9 @@ namespace WorkplaceOutbreakSimulatorConsole
                 int floorId = floors.FirstOrDefault(f => f.FloorNumber == floorNumber).Id;
                 IList<SimulatorWorkplaceRoom> officesOnFloor = offices.Where(f => f.RoomType == SimulatorDataConstant.WorkplaceRoomType_Office && f.FloorId == floorId).ToList();
                 int roomId = officesOnFloor[random.Next(0, officesOnFloor.Count)].Id;
-                employee.RoomId = roomId;
+                employee.OfficeId = roomId;
                 int peopleOnFloor = (from e in employees
-                                  join r in offices on e.RoomId equals r.Id
+                                  join r in offices on e.OfficeId equals r.Id
                                   where r.FloorId == floorId
                                   select e).Count();
                 if (peopleOnFloor >= floorNumberPeopleCountDict[floorNumber])
@@ -192,6 +168,7 @@ namespace WorkplaceOutbreakSimulatorConsole
         {
             SimulatorVirus virus = new SimulatorVirus(.2m, .35m, 5);
             virus.Id = 1;
+            virus.TestResultWaitTime = new TimeSpan(3, 0, 0, 0);
             return virus;
         }
 

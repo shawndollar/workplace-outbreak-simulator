@@ -9,7 +9,7 @@ namespace WorkplaceOutbreakSimulatorEngine.Models
 
         public int Id { get; set; }
 
-        public int RoomId { get; set; }               
+        public int OfficeId { get; set; }
 
         public string FirstName { get; set; }
 
@@ -26,12 +26,31 @@ namespace WorkplaceOutbreakSimulatorEngine.Models
             get; set;
         }
 
-        public DateTime? SickLeaveDateTime { get; set; }
+        public DateTime? ScheduledVirusStageChangeDateTime
+        {
+            get;
+            set;
+        }
 
+        public DateTime? SickLeaveStartDateTime { get; set; }
+
+        public bool IsOutSick
+        {
+            get
+            {
+                return SickLeaveStartDateTime != null;
+            }
+        }
+
+        public string InfectiontTestResult { get; set; }
+
+        public DateTime? InfectionTestDateTime { get; set; }
+
+        public int? CurrentRoomId { get; set; }
 
         public override string ToString()
         {
-            return $"{Id}, {FirstName} {LastName}, {Gender}, {RoomId}";
+            return $"{Id}, {FirstName} {LastName}, {Gender}, {OfficeId}";
         }
     }
 }
