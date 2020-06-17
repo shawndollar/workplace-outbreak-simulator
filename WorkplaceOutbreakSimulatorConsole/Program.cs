@@ -19,8 +19,8 @@ namespace WorkplaceOutbreakSimulatorConsole
         {
             SimulatorConfiguration simConfig = await CreateConfiguration();
             SimulatorEngine simEngine = new SimulatorEngine(simConfig);
-            simEngine.Run();
-
+            SimulatorResult result = simEngine.Run();
+            Console.WriteLine(!result.HasError + " " + result.ErrorMessage);
         }
 
         static async Task<SimulatorConfiguration> CreateConfiguration()

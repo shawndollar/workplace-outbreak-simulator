@@ -82,7 +82,7 @@ namespace WorkplaceOutbreakSimulatorEngine
             catch (Exception exc)
             {
                 result.HasError = true;
-                result.ErrorMessage = exc.Message;
+                result.ErrorMessage = exc.ToString();
             }
 
             return result;
