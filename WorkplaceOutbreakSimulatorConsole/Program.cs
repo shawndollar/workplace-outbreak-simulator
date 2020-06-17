@@ -41,6 +41,7 @@ namespace WorkplaceOutbreakSimulatorConsole
                 DateTime now = DateTime.Now;
                 simConfig.StartDateTime = new DateTime(now.Year, now.Month, now.Day, simConfig.StartOfWorkday.Hours, simConfig.StartOfWorkday.Minutes, simConfig.StartOfWorkday.Seconds);
             }
+
             simConfig.EndDateTime = simConfig.StartDateTime.AddMonths(4);
             simConfig.EndDateTime = new DateTime(simConfig.EndDateTime.Year, simConfig.EndDateTime.Month, simConfig.EndDateTime.Day, simConfig.EndOfWorkday.Hours, simConfig.EndOfWorkday.Minutes, simConfig.EndOfWorkday.Seconds);
 
@@ -93,7 +94,12 @@ namespace WorkplaceOutbreakSimulatorConsole
 
             SetEmployeesBreakroomUse(simConfig.Employees, .25m); // mark employees who will use break room
 
-            AssignEmployeesToOffices(simDataStore, simConfig.WorkplaceFloors, simConfig.WorkplaceRooms.Where(f => f.RoomType == SimulatorDataConstant.WorkplaceRoomType_Office).ToList(), floorNumberPeopleCountDict, simConfig.Employees);
+            {
+                int virusStageId = simConfig.VirusStages.FirstOrDefault(f => f.InfectionStage == simConfig.InitialSickStage).Id;
+                SetInitialInfectedEmployees(simConfig.Employees, simConfig.InitialSickCount, virusStageId, simConfig.StartDateTime);
+            }
+
+            AssignEmployeesToOffices(simConfig.WorkplaceFloors, simConfig.WorkplaceRooms.Where(f => f.RoomType == SimulatorDataConstant.WorkplaceRoomType_Office).ToList(), floorNumberPeopleCountDict, simConfig.Employees);
             
             return simConfig;
 
@@ -137,7 +143,7 @@ namespace WorkplaceOutbreakSimulatorConsole
         /// <param name="offices"></param>
         /// <param name="floorPeopleCountDict"></param>
         /// <param name="employees"></param>
-        static void AssignEmployeesToOffices(SimulatorDataStore simDataStore, IList<SimulatorWorkplaceFloor> floors, IList<SimulatorWorkplaceRoom> offices, IDictionary<int, int> floorNumberPeopleCountDict, IList<SimulatorEmployee> employees)
+        static void AssignEmployeesToOffices(IList<SimulatorWorkplaceFloor> floors, IList<SimulatorWorkplaceRoom> offices, IDictionary<int, int> floorNumberPeopleCountDict, IList<SimulatorEmployee> employees)
         {
             Random random = new Random();
 
@@ -161,6 +167,21 @@ namespace WorkplaceOutbreakSimulatorConsole
                 {
                     unfilledFloors.Remove(floorNumber);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Set the virus stage for a number of employees.
+        /// </summary>
+        /// <param name="employees">The whole employee list. The first employees in the list will be marked as infected.</param>
+        /// <param name="infectedCount">The number of people to infect.</param>
+        /// <param name="viralStage">The initial viral stage.</param>
+        static void SetInitialInfectedEmployees(IList<SimulatorEmployee> employees, int infectedCount, int virusStageId, DateTime startDateTime)
+        {
+            for (int i = 0; i < infectedCount && i < employees.Count; i++)
+            {
+                employees[i].VirusStageId = virusStageId;
+                employees[i].VirusStageLastChangeDateTime = startDateTime;
             }
         }
 

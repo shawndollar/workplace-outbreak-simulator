@@ -68,7 +68,7 @@ namespace WorkplaceOutbreakSimulatorEngine
 
             try
             {
-                InitializeEngine();
+                InitializeSimulation();
                 while (!result.HasError && CanContinueSimulation())
                 {
                     AdvanceEmployeesVirusStages();
@@ -88,18 +88,29 @@ namespace WorkplaceOutbreakSimulatorEngine
             return result;
         }
 
+        /// <summary>
+        /// Loop through all contagious employees who are in the office and spread the virus to the people 
+        /// who they are in contact with based on the infection rate.
+        /// </summary>
         public void SpreadTheVirus()
         {
             foreach (var infectedEmployee in Configuration.Employees.Where(f => !f.IsOutSick && IsEmployeeContagious(f)))
             {
-
+                var contactedEmployees = Configuration.Employees.Where(f => !f.IsOutSick && f.CurrentRoomId == infectedEmployee.CurrentRoomId && IsEmployeeWell(f));
+                foreach (var contactedEmployee in contactedEmployees)
+                {
+                    if (DoSpreadVirus())
+                    {
+                        IncrementEmployeeVirusStage(contactedEmployee);                        
+                    }
+                }
             }
         }
 
         /// <summary>
         /// Initialize the necessary simulation property values.
         /// </summary>
-        private void InitializeEngine()
+        private void InitializeSimulation()
         {
             DataIntervalDuringWorkDayCount = 0;
             DataIntervalTotalCount = 0;
@@ -313,6 +324,39 @@ namespace WorkplaceOutbreakSimulatorEngine
         }
 
         /// <summary>
+        /// Determine if the employee is infected based on his virus stage and the virus stage infected property.
+        /// </summary>
+        /// <param name="employee">The employee to check.</param>
+        /// <returns>Return if the employee is infected.</returns>
+        private bool IsEmployeeInfected(SimulatorEmployee employee)
+        {
+            var virusStage = Configuration.VirusStages.FirstOrDefault(f => f.Id == employee.VirusStageId);
+            return virusStage != null && virusStage.IsInfected;
+        }
+
+        /// <summary>
+        /// Determine if the employee is immune based on his virus stage and the virus stage property.
+        /// </summary>
+        /// <param name="employee">The employee to check.</param>
+        /// <returns>Return if the employee is immune.</returns>
+        private bool IsEmployeeImmune(SimulatorEmployee employee)
+        {
+            var virusStage = Configuration.VirusStages.FirstOrDefault(f => f.Id == employee.VirusStageId);
+            return virusStage != null && virusStage.InfectionStage == SimulatorDataConstant.InfectionStage_Immune;
+        }
+
+        /// <summary>
+        /// Determine if the employee is "well" based on his virus stage and the virus stage property.
+        /// </summary>
+        /// <param name="employee">The employee to check.</param>
+        /// <returns>Return if the employee is "well".</returns>
+        private bool IsEmployeeWell(SimulatorEmployee employee)
+        {
+            var virusStage = Configuration.VirusStages.FirstOrDefault(f => f.Id == employee.VirusStageId);
+            return virusStage != null && virusStage.InfectionStage == SimulatorDataConstant.InfectionStage_Well;
+        }
+
+        /// <summary>
         /// Determine whether to issue a test based on test rate.
         /// </summary>
         /// <returns>Return true if a test should be issued.</returns>
@@ -323,6 +367,21 @@ namespace WorkplaceOutbreakSimulatorEngine
             // Multiply by 1000 instead of 100 just in case test rate is has thousandths place (which is very likely). It'll be more exact.
             int randomNumber = _random.Next(1, 1001);
             return randomNumber <= Convert.ToInt32(Configuration.Virus.TestRate * 1000);
+        }
+
+        /// <summary>
+        /// Given a certain infection rate, this will determine if the infection was spread.
+        /// We're just using the infection rate and checking to see if a random number falls within that number.
+        /// This is a little different than saying that the virus infects x% of the people in contact.
+        /// </summary>
+        /// <returns>True if the virus should be spread.</returns>
+        private bool DoSpreadVirus()
+        {
+            // Pick a random number between 1 and 1000 and see if it's within our infection rate. 
+            // Example: There is a 25% (.25*1000) chance that the number will be between 1 and 250.
+            // Multiply by 1000 instead of 100 just in case rate is has thousandths place (which is very likely). It'll be more exact.
+            int randomNumber = _random.Next(1, 1001);
+            return randomNumber <= Convert.ToInt32(Configuration.Virus.InfectionRate * 1000);
         }
 
         /// <summary>
@@ -371,6 +430,7 @@ namespace WorkplaceOutbreakSimulatorEngine
             if (newStage != null)
             {
                 employee.VirusStageId = newStage.Id;
+                employee.VirusStageLastChangeDateTime = SimulatorDateTime;
             }
         }
 
