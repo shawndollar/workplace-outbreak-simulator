@@ -19,5 +19,10 @@ namespace WorkplaceOutbreakSimulatorEngine.Models
 
         public int FloorNumber { get; set; }
 
+        public override string ToString()
+        {
+            return $"{Id}, {FloorNumber}";
+        }
+
     }
 }

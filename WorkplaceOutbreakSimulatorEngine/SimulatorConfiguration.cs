@@ -31,17 +31,17 @@ namespace WorkplaceOutbreakSimulatorEngine
 
         public string InitialSickStage { get; set; }
 
-        public IList<SimulatorEmployee> Employees { get; set; }
+        public IList<SimulatorEmployee> Employees { get; set; } = new List<SimulatorEmployee>();
 
         public SimulatorWorkplace Workplace { get; set; }
 
-        public IList<SimulatorWorkplaceFloor> WorkplaceFloors { get; set; }
+        public IList<SimulatorWorkplaceFloor> WorkplaceFloors { get; set; } = new List<SimulatorWorkplaceFloor>();
 
-        public IList<SimulatorWorkplaceRoom> WorkplaceRooms { get; set; }
+        public IList<SimulatorWorkplaceRoom> WorkplaceRooms { get; set; } = new List<SimulatorWorkplaceRoom>();
         
         public SimulatorVirus Virus { get; set; }
 
-        public IList<SimulatorVirusStage> VirusStages { get; set; }
+        public IList<SimulatorVirusStage> VirusStages { get; set; } = new List<SimulatorVirusStage>();
 
     }
 }
