@@ -23,7 +23,7 @@ namespace WorkplaceOutbreakSimulatorConsole
 
             SimulatorConfiguration simConfig = await CreateConfiguration(useTestPersonFile);
             SimulatorEngine simEngine = new SimulatorEngine(simConfig);
-            string outputFile = @"C:\projects\workplace-outbreak-simulator\simulator_output.txt";
+            string outputFile = @"C:\Users\sd2\Desktop\simulator_output.txt";
             StreamWriter sw = new StreamWriter(outputFile);
             sw.AutoFlush = true;
 
@@ -41,7 +41,13 @@ namespace WorkplaceOutbreakSimulatorConsole
                                                                                     join v in simConfig.VirusStages
                                                                                     on e.VirusStageId equals v.Id
                                                                                     where v.IsInfected
-                                                                                    select e).Count());                        
+                                                                                    select e).Count() + " Immune: " +
+                                                                                    (from e in simConfig.Employees
+                                                                                     join v in simConfig.VirusStages
+                                                                                     on e.VirusStageId equals v.Id
+                                                                                     where v.InfectionStage == 
+                                                                                     SimulatorDataConstant.InfectionStage_Immune
+                                                                                     select e).Count());
                     }
                     while (!result.IsSimulatorComplete && !result.HasError);                    
                     sw.WriteLine("Status " + !result.HasError + " " + result.ErrorMessage);
@@ -126,15 +132,6 @@ namespace WorkplaceOutbreakSimulatorConsole
             // mark employees who will use break room
             SetEmployeesBreakroomUse(simConfig.Employees, .25m);
 
-            // set all employees to well first
-            SetInitialWellEmployees(simConfig.Employees, simConfig.VirusStages);
-
-            // now set the sick employee(s)
-            {
-                int virusStageId = simConfig.VirusStages.FirstOrDefault(f => f.InfectionStage == simConfig.InitialSickStage).Id;
-                SetInitialInfectedEmployees(simConfig.Employees, simConfig.InitialSickCount, virusStageId, simConfig.StartDateTime);
-            }
-
             AssignEmployeesToOffices(simConfig.WorkplaceFloors, simConfig.WorkplaceRooms.Where(f => f.RoomType == SimulatorDataConstant.WorkplaceRoomType_Office).ToList(), floorNumberPeopleCountDict, simConfig.Employees);
             
             return simConfig;
@@ -204,22 +201,7 @@ namespace WorkplaceOutbreakSimulatorConsole
                 }
             }
         }
-
-        /// <summary>
-        /// Set the virus stage for a number of employees.
-        /// </summary>
-        /// <param name="employees">The whole employee list. The first employees in the list will be marked as infected.</param>
-        /// <param name="infectedCount">The number of people to infect.</param>
-        /// <param name="viralStage">The initial viral stage.</param>
-        static void SetInitialInfectedEmployees(IList<SimulatorEmployee> employees, int infectedCount, int virusStageId, DateTime startDateTime)
-        {
-            for (int i = 0; i < infectedCount && i < employees.Count; i++)
-            {
-                employees[i].VirusStageId = virusStageId;
-                employees[i].VirusStageLastChangeDateTime = startDateTime;
-            }
-        }
-
+        
         static SimulatorVirus GetVirus()
         {
             SimulatorVirus virus = new SimulatorVirus(.2m, .35m, 5);
@@ -247,15 +229,6 @@ namespace WorkplaceOutbreakSimulatorConsole
             }
 
             return virusStages;
-        }
-
-        static void SetInitialWellEmployees(IList<SimulatorEmployee> employees, IList<SimulatorVirusStage> virusStages)
-        {
-            int virusStageId = virusStages.FirstOrDefault(f => f.InfectionStage == SimulatorDataConstant.InfectionStage_Well).Id;
-            foreach (var employee in employees)
-            {
-                employee.VirusStageId = virusStageId;
-            }
         }
 
         static async Task<IList<SimulatorEmployee>> GetEmployeesAsync(SimulatorDataStore simDataStore, int count, bool getFromFile)

@@ -67,6 +67,8 @@ namespace WorkplaceOutbreakSimulatorEngine
             DataIntervalDuringWorkDayCount = 0;
             DataIntervalTotalCount = 0;
             SimulatorDateTime = Configuration.StartDateTime;
+            SetInitialEmployeesToWell();
+            SetInitialInfectedEmployees();
         }
 
         /// <summary>
@@ -477,10 +479,15 @@ namespace WorkplaceOutbreakSimulatorEngine
             // But if it happens, just leave the stage where it is.
             if (newStage != null)
             {
-                employee.VirusStageId = newStage.Id;
-                employee.VirusStageLastChangeDateTime = SimulatorDateTime;                
-                employee.ScheduledVirusStageChangeDateTime = GetNextScheduledVirusStageChangeTime(newStage);
+                SetEmployeeVirusStage(employee, newStage);
             }
+        }
+
+        private void SetEmployeeVirusStage(SimulatorEmployee employee, SimulatorVirusStage virusStage)
+        {
+            employee.VirusStageId = virusStage.Id;
+            employee.VirusStageLastChangeDateTime = SimulatorDateTime;
+            employee.ScheduledVirusStageChangeDateTime = GetNextScheduledVirusStageChangeTime(virusStage);
         }
 
         /// <summary>
@@ -523,6 +530,63 @@ namespace WorkplaceOutbreakSimulatorEngine
             return number;
         }
 
+        /// <summary>
+        /// Set all employee virus stages to "well" virus stage.
+        /// </summary>
+        private void SetInitialEmployeesToWell()
+        {
+            int virusStageId = Configuration.VirusStages.FirstOrDefault(f => f.InfectionStage == SimulatorDataConstant.InfectionStage_Well).Id;
+            foreach (var employee in Configuration.Employees)
+            {
+                employee.VirusStageId = virusStageId;
+            }
+        }
+
+        /// <summary>
+        /// Set the virus stage for a number of employees.
+        /// </summary>
+        /// <param name="employees">The whole employee list. The first employees in the list will be marked as infected.</param>
+        /// <param name="infectedCount">The number of people to infect.</param>
+        /// <param name="viralStage">The initial viral stage.</param>
+        private void SetInitialInfectedEmployees()
+        {
+            SimulatorVirusStage initialVirusStage = Configuration.VirusStages.FirstOrDefault(f => f.InfectionStage == Configuration.InitialSickStage);
+
+            try
+            {
+                // Get all employee IDs.
+                int[] allEmployeeIds = (from e in Configuration.Employees
+                                           select e.Id).ToArray();
+                                
+                IList<int> initialInfectedEmployeeIds = new List<int>();
+
+                // Grab random employees and add them to infected list.                
+                while (initialInfectedEmployeeIds.Count < Configuration.InitialSickCount)
+                {
+                    int idIndex = GetRandomNumber(0, allEmployeeIds.Length);
+                    if (!initialInfectedEmployeeIds.Contains(idIndex))
+                    {
+                        initialInfectedEmployeeIds.Add(allEmployeeIds[idIndex]);
+                    }
+                }
+
+                // Finally, set the employees' statuses.
+                foreach (var employeeId in initialInfectedEmployeeIds)
+                {
+                    var employee = Configuration.Employees.First(f => f.Id == employeeId);
+                    SimulatorVirusStage employeeVirusStage = Configuration.VirusStages.FirstOrDefault(f => f.Id == employee.VirusStageId);
+                    if (employee.VirusStageId != initialVirusStage.Id)
+                    {
+                        SetEmployeeVirusStage(employee, initialVirusStage);
+                    }
+                }
+            }
+            catch (Exception exc)
+            {
+                throw new Exception($"Unable to set initial infected employees: {exc.Message}", exc);
+            }
+        }
+
         public bool IsInfectionComplete()
         {
             int totalInfected = (from e in Configuration.Employees
@@ -533,6 +597,7 @@ namespace WorkplaceOutbreakSimulatorEngine
 
             return totalInfected == Configuration.Employees.Count;
         }
+
 
         #endregion Methods
     }
