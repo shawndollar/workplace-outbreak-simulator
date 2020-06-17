@@ -9,21 +9,15 @@ using WorkplaceOutbreakSimulatorEngine.Models;
 namespace WorkplaceOutbreakSimulatorEngine.DataRepository
 {
     public class SimulatorDataStore
-    {
-
-        private readonly object _randomLock = new object();
-
+    {                
         public string DataApiKey { get; }
 
         public string DataApiEndpoint { get;  }
         
-        private Random Randomizer { get; }
-
         public SimulatorDataStore(string apiEndpoint, string dataApiKey)
         {
             DataApiEndpoint = apiEndpoint;
             DataApiKey = dataApiKey;
-            Randomizer = new Random();
         }
 
         public async Task<string> GetEmployeesAsync(int count)
@@ -43,16 +37,6 @@ namespace WorkplaceOutbreakSimulatorEngine.DataRepository
             {
                 return await sr.ReadToEndAsync();
             }
-        }
-
-        public int GetRandomNumber(int min, int max)
-        {
-            int number;
-            lock (_randomLock)
-            {
-                number = Randomizer.Next(min, max);
-            }
-            return number;
         }
 
         private string GetApiUrl(int count)

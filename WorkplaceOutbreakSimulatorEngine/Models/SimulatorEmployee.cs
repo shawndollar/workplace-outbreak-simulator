@@ -21,7 +21,13 @@ namespace WorkplaceOutbreakSimulatorEngine.Models
 
         public int VirusStageId { get; set; }
 
+        public DateTime? VirusStageLastChangeDateTime
+        {
+            get; set;
+        }
+
         public DateTime? SickLeaveDateTime { get; set; }
+
 
         public override string ToString()
         {
