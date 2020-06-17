@@ -44,7 +44,9 @@ namespace WorkplaceOutbreakSimulatorEngine.Models
         {
             get
             {
-                return InfectionStage == SimulatorDataConstant.InfectionStage_Symptomatic;
+                return InfectionStage == SimulatorDataConstant.InfectionStage_Incubation ||
+                    InfectionStage == SimulatorDataConstant.InfectionStage_Infected ||
+                    InfectionStage == SimulatorDataConstant.InfectionStage_Symptomatic; ;
             }
         }
 

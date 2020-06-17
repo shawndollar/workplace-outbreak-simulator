@@ -58,31 +58,47 @@ namespace WorkplaceOutbreakSimulatorEngine
         #endregion Properties
 
         #region Methods
-        
+
+        /// <summary>
+        /// Initialize the necessary simulation property values.
+        /// </summary>
+        public void InitializeSimulation()
+        {
+            DataIntervalDuringWorkDayCount = 0;
+            DataIntervalTotalCount = 0;
+            SimulatorDateTime = Configuration.StartDateTime;
+        }
+
         /// <summary>
         /// Run the simulator from start to finish using the configuration data.
         /// </summary>
         /// <returns>A simulator result object with status and stats.</returns>
-        public SimulatorResult Run()
+        public SimulatorResult RunNext()
         {
             var result = new SimulatorResult();
 
             try
             {
-                InitializeSimulation();
-                while (!result.HasError && CanContinueSimulation())
+                if (!IsSimulationComplete())
                 {
                     AdvanceEmployeesVirusStages();
                     HandleTestResults();
                     TestSickEmployees();
                     UpdateEmployeesLocations();
-                    SpreadTheVirus();
-                    if (result.CompleteInfectionDateTime == null && IsInfectionComplete())
+                    if (IsWorkTime())
                     {
-                        result.CompleteInfectionDateTime = SimulatorDateTime;
+                        // spread the virus during work hours
+                        SpreadTheVirus();
                     }
                     AdvanceSimulatorDateTime();
                 }
+
+                if (result.CompleteInfectionDateTime == null && IsInfectionComplete())
+                {
+                    result.CompleteInfectionDateTime = SimulatorDateTime;
+                }
+
+                result.IsSimulatorComplete = IsSimulationComplete();
             }
             catch (Exception exc)
             {
@@ -111,16 +127,7 @@ namespace WorkplaceOutbreakSimulatorEngine
                 }
             }
         }
-
-        /// <summary>
-        /// Initialize the necessary simulation property values.
-        /// </summary>
-        private void InitializeSimulation()
-        {
-            DataIntervalDuringWorkDayCount = 0;
-            DataIntervalTotalCount = 0;
-            SimulatorDateTime = Configuration.StartDateTime;
-        }
+                
 
         /// <summary>
         /// This advances each employee's virus stage if the employee's time in the current virus stage has elapsed,
@@ -133,8 +140,6 @@ namespace WorkplaceOutbreakSimulatorEngine
             foreach (var employee in Configuration.Employees.Where(f => f.ScheduledVirusStageChangeDateTime == SimulatorDateTime))
             {            
                 IncrementEmployeeVirusStage(employee);
-                var employeeVirusStage = Configuration.VirusStages.FirstOrDefault(f => f.Id == employee.VirusStageId);
-                employee.ScheduledVirusStageChangeDateTime = GetNextScheduledVirusStageChangeTime(employeeVirusStage);
             }
         }
 
@@ -198,7 +203,6 @@ namespace WorkplaceOutbreakSimulatorEngine
             }
 
             bool isBreakTime = IsBreakTime();
-
 
             // Move all of the people who are not out sick to their respective offices or the break room.
             foreach (var employee in Configuration.Employees.Where(f => !f.IsOutSick))
@@ -325,9 +329,9 @@ namespace WorkplaceOutbreakSimulatorEngine
         /// Determine whether simulation can continue.
         /// </summary>
         /// <returns>True if can continue. False if end of simulation has been reached.</returns>
-        private bool CanContinueSimulation()
+        private bool IsSimulationComplete()
         {
-            return SimulatorDateTime <= Configuration.EndDateTime;
+            return SimulatorDateTime >= Configuration.EndDateTime;
         }
 
         /// <summary>
@@ -474,7 +478,8 @@ namespace WorkplaceOutbreakSimulatorEngine
             if (newStage != null)
             {
                 employee.VirusStageId = newStage.Id;
-                employee.VirusStageLastChangeDateTime = SimulatorDateTime;
+                employee.VirusStageLastChangeDateTime = SimulatorDateTime;                
+                employee.ScheduledVirusStageChangeDateTime = GetNextScheduledVirusStageChangeTime(newStage);
             }
         }
 

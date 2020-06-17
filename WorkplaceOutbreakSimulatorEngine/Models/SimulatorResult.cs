@@ -12,7 +12,9 @@ namespace WorkplaceOutbreakSimulatorEngine.Models
 
         public bool HasError { get; set; }
 
-        public string ErrorMessage { get; set; }                
+        public string ErrorMessage { get; set; }
+
+        public bool IsSimulatorComplete { get; set; }
 
     }
 }

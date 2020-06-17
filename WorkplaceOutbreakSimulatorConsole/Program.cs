@@ -10,6 +10,7 @@ using System.Linq;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices.ComTypes;
+using System.IO;
 
 namespace WorkplaceOutbreakSimulatorConsole
 {
@@ -22,22 +23,34 @@ namespace WorkplaceOutbreakSimulatorConsole
 
             SimulatorConfiguration simConfig = await CreateConfiguration(useTestPersonFile);
             SimulatorEngine simEngine = new SimulatorEngine(simConfig);
+            string outputFile = @"C:\projects\workplace-outbreak-simulator\simulator_output.txt";
+            StreamWriter sw = new StreamWriter(outputFile);
+            sw.AutoFlush = true;
 
-            for (int i = 0; i < attempts; i++)
+            try
             {
-                Console.WriteLine($"Run {i + 1}");
-                SimulatorResult result = simEngine.Run();
-                Console.WriteLine("Status " + !result.HasError + " " + result.ErrorMessage);
-                if (!result.HasError)
+                for (int i = 0; i < attempts; i++)
                 {
-                    Console.WriteLine("Complete Infection Time " + result.CompleteInfectionDateTime);
-                    Console.WriteLine("Total Infected: " + (from e in simConfig.Employees
-                                                            join v in simConfig.VirusStages
-                                                            on e.VirusStageId equals v.Id
-                                                            where v.IsInfected
-                                                            select e).Count());
+                    simEngine.InitializeSimulation();                    
+                    sw.WriteLine($"Run {i + 1}");
+                    SimulatorResult result;
+                    do
+                    {
+                        result = simEngine.RunNext();
+                        sw.WriteLine(simEngine.SimulatorDateTime + " Infected: " + (from e in simConfig.Employees
+                                                                                    join v in simConfig.VirusStages
+                                                                                    on e.VirusStageId equals v.Id
+                                                                                    where v.IsInfected
+                                                                                    select e).Count());                        
+                    }
+                    while (!result.IsSimulatorComplete && !result.HasError);                    
+                    sw.WriteLine("Status " + !result.HasError + " " + result.ErrorMessage);
+                    sw.WriteLine();
                 }
-                Console.WriteLine();
+            }
+            finally
+            {
+                sw.Close();
             }
         }
 
@@ -64,7 +77,7 @@ namespace WorkplaceOutbreakSimulatorConsole
             simConfig.EndDateTime = new DateTime(simConfig.EndDateTime.Year, simConfig.EndDateTime.Month, simConfig.EndDateTime.Day, simConfig.EndOfWorkday.Hours, simConfig.EndOfWorkday.Minutes, simConfig.EndOfWorkday.Seconds);
 
             simConfig.InitialSickCount = 1; // start with one sick person
-            simConfig.InitialSickStage = SimulatorDataConstant.InfectionStage_Symptomatic; // start person off with symptoms
+            simConfig.InitialSickStage = SimulatorDataConstant.InfectionStage_Infected; // set initial infected stage
 
             simConfig.MeetingTimeSpan = new TimeSpan(1, 0, 0); // meetings are one-hour
 
@@ -263,7 +276,7 @@ namespace WorkplaceOutbreakSimulatorConsole
 
             if (string.IsNullOrWhiteSpace(employeesJson))
             {
-                employeesJson = await simDataStore.GetEmployeesFromFileAsync(@"C:\projects\repos\workplace-outbreak-simulator-repo\employees.json");
+                employeesJson = await simDataStore.GetEmployeesFromFileAsync(@"C:\projects\workplace-outbreak-simulator\employees.json");
             }
 
             var results = JsonSerializer.Deserialize<IList<SimulatorEmployee>>(employeesJson);
