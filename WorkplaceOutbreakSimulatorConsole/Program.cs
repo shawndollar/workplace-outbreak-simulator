@@ -11,6 +11,11 @@ using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.IO;
+using WorkplaceOutbreakSimulatorEngine.Helpers;
+using CsvHelper;
+using System.Globalization;
+using System.Dynamic;
+using System.ComponentModel.DataAnnotations;
 
 namespace WorkplaceOutbreakSimulatorConsole
 {
@@ -19,44 +24,116 @@ namespace WorkplaceOutbreakSimulatorConsole
         public static async Task Main(string[] args)
         {
             bool useTestPersonFile = true;
-            int attempts = 1;
-                        
-            string outputFile = @"C:\Users\sd2\Desktop\simulator_output.txt";
+            
+            string outputFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "simulator_output.txt");
+            
+            string csvOutputFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "simulator_output.csv");
+
             StreamWriter sw = new StreamWriter(outputFile);
-            sw.AutoFlush = true;
+
+            SimulatorConfiguration simConfig = await CreateConfiguration(useTestPersonFile);
+            SimulatorEngine simEngine = new SimulatorEngine(simConfig);
+            IList<SimulatorEmployeeContact> allEmployeeContacts = new List<SimulatorEmployeeContact>();
+            SimulatorResult simulatorResult = new SimulatorResult();
 
             try
-            {
-                for (int i = 0; i < attempts; i++)
+            {                
+                simEngine.InitializeSimulation();
+                sw.WriteLine("RUN " + DateTime.Now);
+
+                do
                 {
-                    SimulatorConfiguration simConfig = await CreateConfiguration(useTestPersonFile);
-                    SimulatorEngine simEngine = new SimulatorEngine(simConfig);
-                    simEngine.InitializeSimulation();                    
-                    sw.WriteLine($"Run {i + 1}");
-                    SimulatorResult result;
-                    do
-                    {
-                        result = simEngine.RunNext();
-                        sw.WriteLine(simEngine.SimulatorDateTime + " Infected: " + (from e in simConfig.Employees
-                                                                                    join v in simConfig.VirusStages
-                                                                                    on e.VirusStageId equals v.Id
-                                                                                    where v.IsInfected
-                                                                                    select e).Count() + " Immune: " +
-                                                                                    (from e in simConfig.Employees
-                                                                                     join v in simConfig.VirusStages
-                                                                                     on e.VirusStageId equals v.Id
-                                                                                     where v.InfectionStage == 
-                                                                                     SimulatorDataConstant.InfectionStage_Immune
-                                                                                     select e).Count());
-                    }
-                    while (!result.IsSimulatorComplete && !result.HasError);                    
-                    sw.WriteLine("Status " + !result.HasError + " " + result.ErrorMessage);
-                    sw.WriteLine();
+                    simulatorResult = simEngine.RunNext();
+
+                    sw.WriteLine(simEngine.SimulatorDateTime + " Infected: " + (from e in simConfig.Employees
+                                                                                join v in simConfig.VirusStages
+                                                                                on e.VirusStageId equals v.Id
+                                                                                where v.IsInfected
+                                                                                select e).Count() + " Immune: " +
+                                                                                (from e in simConfig.Employees
+                                                                                 join v in simConfig.VirusStages
+                                                                                 on e.VirusStageId equals v.Id
+                                                                                 where v.InfectionStage ==
+                                                                                 SimulatorDataConstant.InfectionStage_Immune
+                                                                                 select e).Count());
+                    allEmployeeContacts.AddRange(simulatorResult.EmployeeContacts);
                 }
+                while (!simulatorResult.IsSimulatorComplete && !simulatorResult.HasError);
+
+                sw.WriteLine("Status " + !simulatorResult.HasError + " " + simulatorResult.ErrorMessage);                               
             }
             finally
             {
                 sw.Close();
+            }
+
+            await CreateSimulatorCsvLogAsync(allEmployeeContacts.Where(f => f.EmployeeId == allEmployeeContacts[0].EmployeeId).ToList(), simConfig.Employees, simConfig.WorkplaceRooms, simConfig.VirusStages, csvOutputFile);
+        }
+
+        /// <summary>
+        /// Create and write the employee contact info to a CSV file.
+        /// </summary>
+        /// <param name="contacts">The records to write out to the CSV file.</param>
+        /// <param name="employees">The full list of employees for looking up stuff.</param>
+        /// <param name="rooms">The full list of rooms for looking up room info.</param>
+        /// <param name="virusStages">The full list of virus stages for looking up virus stage info.</param>
+        /// <param name="outputFile">The output file to write to.</param>
+        /// <returns>Task with no return value.</returns>
+        static async Task CreateSimulatorCsvLogAsync(IList<SimulatorEmployeeContact> contacts, 
+            IList<SimulatorEmployee> employees, 
+            IList<SimulatorWorkplaceRoom> rooms, 
+            IList<SimulatorVirusStage> virusStages, 
+            string outputFile)
+        {
+            var dynamicList = new List<dynamic>(contacts.Count);
+
+            foreach (var contact in contacts)
+            {
+                var employee = employees.FirstOrDefault(f => f.Id == contact.EmployeeId);
+                var virusStage = virusStages.FirstOrDefault(f => f.Id == contact.VirusStageId);
+                var workplaceRoom = rooms.FirstOrDefault(f => f.Id == contact.RoomId);
+                dynamic d = new ExpandoObject();
+                d.ContactDateTime = contact.ContactDateTime;
+                d.EmployeeId = employee?.Id;
+                d.FirstName = employee?.FirstName;
+                d.LastName = employee?.LastName;
+                d.Gender = employee?.Gender;
+                d.RoomId = contact.RoomId;
+                d.RoomType = workplaceRoom?.RoomType;
+                d.VirusStatus = virusStage?.InfectionStage;
+                for (int i = 0; i < contact.EmployeeContacts.Count; i++)
+                {
+                    var contactEmployee = employees.FirstOrDefault(f => f.Id == contact.EmployeeContacts[i].EmployeeId);
+                    AddDynamicProperty(d, $"Contact{i + 1}", contactEmployee.FullName);
+                }
+                dynamicList.Add(d);
+            }
+
+            using (var writer = new StreamWriter(outputFile))
+            {
+                using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+                {
+                    await csv.WriteRecordsAsync(dynamicList);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Use IDictionary methods of ExpandoObject to add properties.
+        /// </summary>
+        /// <param name="expando">The ExpandObject class to add a property</param>
+        /// <param name="propertyName">The name of the new property.</param>
+        /// <param name="propertyValue">The object of the new property.</param>
+        static void AddDynamicProperty(ExpandoObject expando, string propertyName, object propertyValue)
+        {
+            var expandoDict = expando as IDictionary<string, object>;
+            if (expandoDict.ContainsKey(propertyName))
+            {
+                expandoDict[propertyName] = propertyValue;
+            }
+            else
+            {
+                expandoDict.Add(propertyName, propertyValue);
             }
         }
 
@@ -92,7 +169,7 @@ namespace WorkplaceOutbreakSimulatorConsole
 
             simConfig.BreakTimeOfDay = new TimeSpan(12, 0, 0); // this is the time at which employees can take a break in the breakrooms
             simConfig.BreakTimeSpan = new TimeSpan(1, 0, 0); // this is the length of break time
-                        
+
             simConfig.Workplace = GetWorkplace();
 
             simConfig.Virus = GetVirus();
@@ -109,23 +186,23 @@ namespace WorkplaceOutbreakSimulatorConsole
             simConfig.WorkplaceFloors = GetWorkplaceFloors(simConfig.Workplace.Id, floorCount); // add 5 floors, assume contiguous
 
             // add all the rooms as requested
-            simConfig.WorkplaceRooms.AddRooms(simConfig.WorkplaceFloors.First(f => f.FloorNumber == 1).Id, 2, SimulatorDataConstant.WorkplaceRoomType_Office);
-            
-            simConfig.WorkplaceRooms.AddRooms(simConfig.WorkplaceFloors.First(f => f.FloorNumber == 2).Id, 12, SimulatorDataConstant.WorkplaceRoomType_Office);
-            simConfig.WorkplaceRooms.AddRooms(simConfig.WorkplaceFloors.First(f => f.FloorNumber == 2).Id, 1, SimulatorDataConstant.WorkplaceRoomType_Breakroom);
-            simConfig.WorkplaceRooms.AddRooms(simConfig.WorkplaceFloors.First(f => f.FloorNumber == 2).Id, 2, SimulatorDataConstant.WorkplaceRoomType_Meeting);
+            AddRoomsToFloor(simConfig.WorkplaceRooms, simConfig.WorkplaceFloors.First(f => f.FloorNumber == 1).Id, 2, SimulatorDataConstant.WorkplaceRoomType_Office);
 
-            simConfig.WorkplaceRooms.AddRooms(simConfig.WorkplaceFloors.First(f => f.FloorNumber == 3).Id, 15, SimulatorDataConstant.WorkplaceRoomType_Office);
-            simConfig.WorkplaceRooms.AddRooms(simConfig.WorkplaceFloors.First(f => f.FloorNumber == 3).Id, 1, SimulatorDataConstant.WorkplaceRoomType_Breakroom);
-            simConfig.WorkplaceRooms.AddRooms(simConfig.WorkplaceFloors.First(f => f.FloorNumber == 3).Id, 2, SimulatorDataConstant.WorkplaceRoomType_Meeting);
+            AddRoomsToFloor(simConfig.WorkplaceRooms, simConfig.WorkplaceFloors.First(f => f.FloorNumber == 2).Id, 12, SimulatorDataConstant.WorkplaceRoomType_Office);
+            AddRoomsToFloor(simConfig.WorkplaceRooms, simConfig.WorkplaceFloors.First(f => f.FloorNumber == 2).Id, 1, SimulatorDataConstant.WorkplaceRoomType_Breakroom);
+            AddRoomsToFloor(simConfig.WorkplaceRooms, simConfig.WorkplaceFloors.First(f => f.FloorNumber == 2).Id, 2, SimulatorDataConstant.WorkplaceRoomType_Meeting);
 
-            simConfig.WorkplaceRooms.AddRooms(simConfig.WorkplaceFloors.First(f => f.FloorNumber == 4).Id, 5, SimulatorDataConstant.WorkplaceRoomType_Office);
-            simConfig.WorkplaceRooms.AddRooms(simConfig.WorkplaceFloors.First(f => f.FloorNumber == 4).Id, 1, SimulatorDataConstant.WorkplaceRoomType_Breakroom);
-            simConfig.WorkplaceRooms.AddRooms(simConfig.WorkplaceFloors.First(f => f.FloorNumber == 4).Id, 3, SimulatorDataConstant.WorkplaceRoomType_Meeting);
+            AddRoomsToFloor(simConfig.WorkplaceRooms, simConfig.WorkplaceFloors.First(f => f.FloorNumber == 3).Id, 15, SimulatorDataConstant.WorkplaceRoomType_Office);
+            AddRoomsToFloor(simConfig.WorkplaceRooms, simConfig.WorkplaceFloors.First(f => f.FloorNumber == 3).Id, 1, SimulatorDataConstant.WorkplaceRoomType_Breakroom);
+            AddRoomsToFloor(simConfig.WorkplaceRooms, simConfig.WorkplaceFloors.First(f => f.FloorNumber == 3).Id, 2, SimulatorDataConstant.WorkplaceRoomType_Meeting);
 
-            simConfig.WorkplaceRooms.AddRooms(simConfig.WorkplaceFloors.First(f => f.FloorNumber == 5).Id, 50, SimulatorDataConstant.WorkplaceRoomType_Office);
-            simConfig.WorkplaceRooms.AddRooms(simConfig.WorkplaceFloors.First(f => f.FloorNumber == 5).Id, 1, SimulatorDataConstant.WorkplaceRoomType_Breakroom);
-            simConfig.WorkplaceRooms.AddRooms(simConfig.WorkplaceFloors.First(f => f.FloorNumber == 5).Id, 2, SimulatorDataConstant.WorkplaceRoomType_Meeting);
+            AddRoomsToFloor(simConfig.WorkplaceRooms, simConfig.WorkplaceFloors.First(f => f.FloorNumber == 4).Id, 5, SimulatorDataConstant.WorkplaceRoomType_Office);
+            AddRoomsToFloor(simConfig.WorkplaceRooms, simConfig.WorkplaceFloors.First(f => f.FloorNumber == 4).Id, 1, SimulatorDataConstant.WorkplaceRoomType_Breakroom);
+            AddRoomsToFloor(simConfig.WorkplaceRooms, simConfig.WorkplaceFloors.First(f => f.FloorNumber == 4).Id, 3, SimulatorDataConstant.WorkplaceRoomType_Meeting);
+
+            AddRoomsToFloor(simConfig.WorkplaceRooms, simConfig.WorkplaceFloors.First(f => f.FloorNumber == 5).Id, 50, SimulatorDataConstant.WorkplaceRoomType_Office);
+            AddRoomsToFloor(simConfig.WorkplaceRooms, simConfig.WorkplaceFloors.First(f => f.FloorNumber == 5).Id, 1, SimulatorDataConstant.WorkplaceRoomType_Breakroom);
+            AddRoomsToFloor(simConfig.WorkplaceRooms, simConfig.WorkplaceFloors.First(f => f.FloorNumber == 5).Id, 2, SimulatorDataConstant.WorkplaceRoomType_Meeting);
 
             simConfig.Employees = await GetEmployeesAsync(simDataStore, floorNumberPeopleCountDict.Sum(f => f.Value), useTestPersonFile);
 
@@ -133,7 +210,7 @@ namespace WorkplaceOutbreakSimulatorConsole
             SetEmployeesBreakroomUse(simConfig.Employees, .25m);
 
             AssignEmployeesToOffices(simConfig.WorkplaceFloors, simConfig.WorkplaceRooms.Where(f => f.RoomType == SimulatorDataConstant.WorkplaceRoomType_Office).ToList(), floorNumberPeopleCountDict, simConfig.Employees);
-            
+
             return simConfig;
         }
 
@@ -155,6 +232,17 @@ namespace WorkplaceOutbreakSimulatorConsole
             wp.Id = 1;
             wp.Name = "Default";
             return wp;
+        }
+
+        static void AddRoomsToFloor(IList<SimulatorWorkplaceRoom> rooms, int floorId, int numberOfRooms, string roomType)
+        {
+            for (int i = 0; i < numberOfRooms; i++)
+            {
+                var room = new SimulatorWorkplaceRoom(floorId, roomType);
+                int maxRoomId = (rooms.Count == 0) ? 0 : rooms.Max(f => f.Id);
+                room.Id = maxRoomId + 1;
+                rooms.Add(room);
+            }
         }
 
         static IList<SimulatorWorkplaceFloor> GetWorkplaceFloors(int workPlaceId, int numberOfFloors)
@@ -249,7 +337,7 @@ namespace WorkplaceOutbreakSimulatorConsole
 
             if (string.IsNullOrWhiteSpace(employeesJson))
             {
-                employeesJson = await simDataStore.GetEmployeesFromFileAsync(@"C:\projects\workplace-outbreak-simulator\employees.json");
+                employeesJson = await simDataStore.GetEmployeesFromFileAsync(@"C:\projects\repos\workplace-outbreak-simulator-repo\employees.json");
             }
 
             var results = JsonSerializer.Deserialize<IList<SimulatorEmployee>>(employeesJson);
@@ -262,19 +350,5 @@ namespace WorkplaceOutbreakSimulatorConsole
             return results;
         }
 
-    }
-
-    public static class ExtensionMethods
-    {
-        public static void AddRooms(this IList<SimulatorWorkplaceRoom> rooms, int floorId, int numberOfRooms, string roomType)
-        {
-            for (int i = 0; i < numberOfRooms; i++)
-            {
-                var room = new SimulatorWorkplaceRoom(floorId, roomType);
-                int maxRoomId = (rooms.Count == 0) ? 0 : rooms.Max(f => f.Id);
-                room.Id = maxRoomId + 1;
-                rooms.Add(room);
-            }
-        }
     }
 }

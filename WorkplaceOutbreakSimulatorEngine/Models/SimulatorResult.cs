@@ -8,7 +8,7 @@ namespace WorkplaceOutbreakSimulatorEngine.Models
     {
         public IList<SimulatorEmployeeContact> EmployeeContacts { get; set; } = new List<SimulatorEmployeeContact>();
 
-        public DateTime? CompleteInfectionDateTime { get; set; }
+        public DateTime SimulatorDateTime { get; set; }
 
         public bool HasError { get; set; }
 

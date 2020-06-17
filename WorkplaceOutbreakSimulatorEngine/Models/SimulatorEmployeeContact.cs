@@ -10,6 +10,7 @@ namespace WorkplaceOutbreakSimulatorEngine.Models
         public int EmployeeId { get; set; }
         public int RoomId { get; set; }
         public int VirusStageId { get; set; }
-        public int ContactEmployeeId { get; set; }                
+
+        public IList<SimulatorEmployeeContact> EmployeeContacts { get; set; } = new List<SimulatorEmployeeContact>();
     }
 }

@@ -15,6 +15,14 @@ namespace WorkplaceOutbreakSimulatorEngine.Models
 
         public string LastName { get; set; }
 
+        public string FullName
+        {
+            get
+            {
+                return $"{FirstName ?? ""} {LastName ?? ""}".Trim();
+            }
+        }
+
         public string Gender { get; set; }
 
         public bool IsBreakroomUser { get; set; }
@@ -50,7 +58,7 @@ namespace WorkplaceOutbreakSimulatorEngine.Models
 
         public override string ToString()
         {
-            return $"{Id}, {FirstName} {LastName}, {Gender}, {OfficeId}";
+            return $"{Id}, {FullName}, {Gender}, {OfficeId}";
         }
     }
 }

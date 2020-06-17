@@ -7,6 +7,8 @@ using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using WorkplaceOutbreakSimulatorEngine.Models;
+using WorkplaceOutbreakSimulatorEngine.Helpers;
+
 
 namespace WorkplaceOutbreakSimulatorEngine
 {
@@ -78,6 +80,7 @@ namespace WorkplaceOutbreakSimulatorEngine
         public SimulatorResult RunNext()
         {
             var result = new SimulatorResult();
+            result.SimulatorDateTime = SimulatorDateTime;
 
             try
             {
@@ -89,15 +92,11 @@ namespace WorkplaceOutbreakSimulatorEngine
                     UpdateEmployeesLocations();
                     if (IsWorkTime())
                     {
-                        // spread the virus during work hours
-                        SpreadTheVirus();
+                        // deal with all employee contacts                        
+                        var contacts = SimulateEmployeeContacts();
+                        result.EmployeeContacts.AddRange(contacts);
                     }
                     AdvanceSimulatorDateTime();
-                }
-
-                if (result.CompleteInfectionDateTime == null && IsInfectionComplete())
-                {
-                    result.CompleteInfectionDateTime = SimulatorDateTime;
                 }
 
                 result.IsSimulatorComplete = IsSimulationComplete();
@@ -115,21 +114,76 @@ namespace WorkplaceOutbreakSimulatorEngine
         /// Loop through all contagious employees who are in the office and spread the virus to the people 
         /// who they are in contact with based on the infection rate.
         /// </summary>
-        public void SpreadTheVirus()
+        public IList<SimulatorEmployeeContact> SimulateEmployeeContacts()
         {
-            foreach (var infectedEmployee in Configuration.Employees.Where(f => !f.IsOutSick && IsEmployeeContagious(f)).ToList())
+            // Get initial list of all employees.
+            IList<SimulatorEmployeeContact> employeeContacts = InitializeEmployeeContacts();
+            SimulatorVirusStage infectedStage = Configuration.VirusStages.First(f => f.InfectionStage == SimulatorDataConstant.InfectionStage_Infected);
+
+            // Now we need to retrieve all of the employees that each employee contacted.
+            foreach (var currentEmployee in Configuration.Employees)
             {
-                var contactedEmployees = Configuration.Employees.Where(f => !f.IsOutSick && f.CurrentRoomId == infectedEmployee.CurrentRoomId && IsEmployeeWell(f)).ToList();
+                if (currentEmployee.IsOutSick)
+                {
+                    // If the employee is out sick, then we do not need to check for any more contacts.
+                    continue;
+                }
+
+                // Now retrieve all employees in the same room (except the employee herself).
+                var contactedEmployees = Configuration.Employees.Where(f => !f.IsOutSick && f.CurrentRoomId == currentEmployee.CurrentRoomId && f.Id != currentEmployee.Id).ToList();
+
+                // Loop through each contacted employee and determine if he/she was infected.
                 foreach (var contactedEmployee in contactedEmployees)
                 {
-                    if (DoSpreadVirus())
+                    // Always add each contacted employee to the employee's employee contact list.
+                    employeeContacts.First(f => f.EmployeeId == currentEmployee.Id).EmployeeContacts.Add(GetEmployeeContactFromEmployee(contactedEmployee));
+
+                    // If the employee is contagious and the contact is well, then check to see if an infection occurred.
+                    if (IsEmployeeContagious(currentEmployee) && IsEmployeeWell(contactedEmployee))
                     {
-                        IncrementEmployeeVirusStage(contactedEmployee);                        
+                        // Check to see if infection caused (random).
+                        if (IsContactInfectious())
+                        {
+                            // Set infected employee to infected stage.
+                            SetEmployeeVirusStage(contactedEmployee, infectedStage);
+                        }
                     }
                 }
             }
+
+            return employeeContacts;
         }
                 
+        /// <summary>
+        /// Create a list of employee contact records for every employee.
+        /// </summary>
+        /// <returns>List of EmployeeContact records for every employee. You can fill it out as needed.</returns>
+        private IList<SimulatorEmployeeContact> InitializeEmployeeContacts()
+        {
+            IList<SimulatorEmployeeContact> employeeContacts = new List<SimulatorEmployeeContact>();
+
+            foreach (var employee in Configuration.Employees)
+            {
+                employeeContacts.Add(GetEmployeeContactFromEmployee(employee));
+            }
+            return employeeContacts;
+        }
+
+        /// <summary>
+        /// Create default employee contact record from a given employee.
+        /// </summary>
+        /// <param name="employee">The employee to transform to employee contact.</param>
+        /// <returns>The default employee contact record for the given employee.</returns>
+        private SimulatorEmployeeContact GetEmployeeContactFromEmployee(SimulatorEmployee employee)
+        {
+            SimulatorEmployeeContact employeeContact = new SimulatorEmployeeContact();
+            employeeContact.ContactDateTime = SimulatorDateTime;
+            employeeContact.EmployeeId = employee.Id;
+            employeeContact.RoomId = employee.IsOutSick ? 0 : employee.CurrentRoomId.GetValueOrDefault();
+            employeeContact.VirusStageId = employee.VirusStageId;
+            return employeeContact;
+        }
+
 
         /// <summary>
         /// This advances each employee's virus stage if the employee's time in the current virus stage has elapsed,
@@ -425,11 +479,11 @@ namespace WorkplaceOutbreakSimulatorEngine
         /// This is a little different than saying that the virus infects x% of the people in contact.
         /// </summary>
         /// <returns>True if the virus should be spread.</returns>
-        private bool DoSpreadVirus()
+        private bool IsContactInfectious()
         {
             // Pick a random number between 1 and 1000 and see if it's within our infection rate. 
             // Example: There is a 25% (.25*1000) chance that the number will be between 1 and 250.
-            // Multiply by 1000 instead of 100 just in case rate is has thousandths place (which is very likely). It'll be more exact.
+            // Multiply by 1000 instead of 100 just in case rate is has thousandths place (which is very likely).
             int randomNumber = GetRandomNumber(1, 1001);
             return randomNumber <= Convert.ToInt32(Configuration.Virus.InfectionRate * 1000);
         }
