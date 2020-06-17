@@ -20,9 +20,7 @@ namespace WorkplaceOutbreakSimulatorConsole
         {
             bool useTestPersonFile = true;
             int attempts = 1;
-
-            SimulatorConfiguration simConfig = await CreateConfiguration(useTestPersonFile);
-            SimulatorEngine simEngine = new SimulatorEngine(simConfig);
+                        
             string outputFile = @"C:\Users\sd2\Desktop\simulator_output.txt";
             StreamWriter sw = new StreamWriter(outputFile);
             sw.AutoFlush = true;
@@ -31,6 +29,8 @@ namespace WorkplaceOutbreakSimulatorConsole
             {
                 for (int i = 0; i < attempts; i++)
                 {
+                    SimulatorConfiguration simConfig = await CreateConfiguration(useTestPersonFile);
+                    SimulatorEngine simEngine = new SimulatorEngine(simConfig);
                     simEngine.InitializeSimulation();                    
                     sw.WriteLine($"Run {i + 1}");
                     SimulatorResult result;
