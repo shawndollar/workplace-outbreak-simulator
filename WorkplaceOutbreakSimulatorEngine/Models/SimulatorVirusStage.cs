@@ -6,12 +6,22 @@ namespace WorkplaceOutbreakSimulatorEngine.Models
 {
     public class SimulatorVirusStage
     {
+
+        public SimulatorVirusStage(int virusId, int stageOrder, string infectionStage, int minDays, int maxDays)
+        {
+            VirusId = virusId;
+            StageOrder = stageOrder;
+            InfectionStage = infectionStage;
+            MinDays = minDays;
+            MaxDays = maxDays;
+        }
+
         public int Id { get; set; }
         public int VirusId { get; set; }
         public int StageOrder { get; set; }
-        public string InfectionStage { get; }
-        public int MinDays { get; }
-        public int MaxDays { get; }
+        public string InfectionStage { get; set; }
+        public int MinDays { get; set; }
+        public int MaxDays { get; set; }
         public bool IsContagious
         {
             get
@@ -36,6 +46,11 @@ namespace WorkplaceOutbreakSimulatorEngine.Models
             {
                 return InfectionStage == SimulatorDataConstant.InfectionStage_Symptomatic;
             }
+        }
+
+        public override string ToString()
+        {
+            return $"{Id} {VirusId} {InfectionStage} {StageOrder}";
         }
 
     }

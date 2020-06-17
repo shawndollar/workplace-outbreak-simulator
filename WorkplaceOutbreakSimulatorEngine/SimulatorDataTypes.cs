@@ -13,10 +13,10 @@ namespace WorkplaceOutbreakSimulatorEngine.Models
         public const string WorkplaceRoomType_Breakroom = "Breakroom";
         public const string WorkplaceRoomType_Meeting = "Meeting";
         public const string InfectionStage_Well = "Well";
-        public const string InfectionStage_Infected = "Well";
-        public const string InfectionStage_Incubation = "Well";
-        public const string InfectionStage_Symptomatic = "Well";
-        public const string InfectionStage_Immune = "Well";
+        public const string InfectionStage_Infected = "Infected";
+        public const string InfectionStage_Incubation = "Incubation";
+        public const string InfectionStage_Symptomatic = "Symptomatic";
+        public const string InfectionStage_Immune = "Immune";
         public const string InfectionTestResult_Pending = "Pending";
         public const string InfectionTestResult_Positive = "Positive";
         public const string InfectionTestResult_Negative = "Negative";

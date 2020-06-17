@@ -32,28 +32,6 @@ namespace WorkplaceOutbreakSimulatorConsole
             SimulatorConfiguration simConfig = await CreateConfiguration();
 
             SimulatorEngine simEngine = new SimulatorEngine(simConfig);
-
-            // how many people on each floor
-            foreach (var floor in simConfig.WorkplaceFloors)
-            {
-                int officesOnFloor = simConfig.WorkplaceRooms.Count(f => f.FloorId == floor.Id && f.RoomType == SimulatorDataConstant.WorkplaceRoomType_Office);
-                int peopleOnFloor = 0;
-                
-                Console.WriteLine($"Floor {floor.FloorNumber} Offices {officesOnFloor}");
-
-                foreach (var office in simConfig.WorkplaceRooms.Where(f => f.FloorId == floor.Id && f.RoomType == SimulatorDataConstant.WorkplaceRoomType_Office))
-                {
-                    int peopleInOffice = 0;
-                    peopleInOffice = simConfig.Employees.Count(f => f.RoomId == office.Id);
-                    Console.WriteLine($"Office {office.Id} People {peopleInOffice}");                    
-                    peopleOnFloor += peopleInOffice;
-                }
-                Console.WriteLine($"People On Floor {floor.Id} {peopleOnFloor}");
-                Console.WriteLine("");
-            }
-
-            Console.ReadKey();
-
         }
 
         static async Task<SimulatorConfiguration> CreateConfiguration()
@@ -87,8 +65,11 @@ namespace WorkplaceOutbreakSimulatorConsole
 
             simConfig.BreakTimeOfDay = new TimeSpan(12, 0, 0); // this is the time at which employees can take a break in the breakrooms
             simConfig.BreakTimeSpan = new TimeSpan(1, 0, 0); // this is the length of break time
-
+                        
             simConfig.Workplace = GetWorkplace();
+
+            simConfig.Virus = GetVirus();
+            simConfig.VirusStages = GetVirusStages(simConfig.Virus.Id);
 
             int floorCount = 5;
             IDictionary<int, int> floorNumberPeopleCountDict = new Dictionary<int, int>(floorCount);
@@ -119,12 +100,53 @@ namespace WorkplaceOutbreakSimulatorConsole
             simConfig.WorkplaceRooms.AddRooms(simConfig.WorkplaceFloors.First(f => f.FloorNumber == 5).Id, 1, SimulatorDataConstant.WorkplaceRoomType_Breakroom);
             simConfig.WorkplaceRooms.AddRooms(simConfig.WorkplaceFloors.First(f => f.FloorNumber == 5).Id, 2, SimulatorDataConstant.WorkplaceRoomType_Meeting);
 
-            simConfig.Employees = await GetEmployeesAsync(simDataStore, 530, false);
+            simConfig.Employees = await GetEmployeesAsync(simDataStore, 530, true);
+
+            SetEmployeesBreakroomUse(simConfig.Employees, .25m); // mark employees who will use break room
+
+            Console.WriteLine(simConfig.Employees.Count(f => f.IsBreakroomUser));
 
             AssignEmployeesToOffices(simDataStore, simConfig.WorkplaceFloors, simConfig.WorkplaceRooms.Where(f => f.RoomType == SimulatorDataConstant.WorkplaceRoomType_Office).ToList(), floorNumberPeopleCountDict, simConfig.Employees);
 
+            InitializeEmployeesViralStatus(simDataStore, simConfig.Employees, simConfig.VirusStages, 1, simConfig.VirusStages.First(f => f.InfectionStage == simConfig.InitialSickStage).Id);
+
             return simConfig;
 
+        }
+
+        static void InitializeEmployeesViralStatus(SimulatorDataStore simDataStore, IList<SimulatorEmployee> employees, IList<SimulatorVirusStage> virusStages, int initialSickCount, int initialSickVirusStageId)
+        {
+            int initialVirusStageId = virusStages.OrderBy(f => f.StageOrder).First().Id;
+
+            foreach (var item in employees)
+            {
+                item.VirusStageId = initialVirusStageId;
+            }
+
+            int sickCount = 0;
+
+            do
+            {
+                int sickEmployeeIndex = simDataStore.GetRandomNumber(0, employees.Count);
+                if (employees[sickEmployeeIndex].VirusStageId != initialSickVirusStageId)
+                {
+                    employees[sickEmployeeIndex].VirusStageId = initialSickVirusStageId;
+                    sickCount++;
+                }
+            } while (sickCount < initialSickCount);
+
+        }
+
+        static void SetEmployeesBreakroomUse(IList<SimulatorEmployee> employees, decimal breakroomPercentage)
+        {
+            // convert truncates fractional digits, so let's go ahead and round first
+            int breakRoomUserCount = Convert.ToInt32(Math.Round(employees.Count * breakroomPercentage, 0, MidpointRounding.AwayFromZero)); 
+
+            foreach(var item in employees)
+            {
+                item.IsBreakroomUser = breakRoomUserCount > 0 ? true : false;
+                breakRoomUserCount--;
+            }
         }
 
         static SimulatorWorkplace GetWorkplace()
@@ -134,7 +156,7 @@ namespace WorkplaceOutbreakSimulatorConsole
             wp.Name = "Default";
             return wp;
         }
-        
+
         static IList<SimulatorWorkplaceFloor> GetWorkplaceFloors(int workPlaceId, int numberOfFloors)
         {
             var floors = new List<SimulatorWorkplaceFloor>();
@@ -178,6 +200,34 @@ namespace WorkplaceOutbreakSimulatorConsole
             }
         }
 
+        static SimulatorVirus GetVirus()
+        {
+            SimulatorVirus virus = new SimulatorVirus(.2m, .35m, 5);
+            virus.Id = 1;
+            return virus;
+        }
+
+        static IList<SimulatorVirusStage> GetVirusStages(int virusId)
+        {
+            IList<SimulatorVirusStage> virusStages = new List<SimulatorVirusStage>();
+
+            int order = 1;
+
+            virusStages.Add(new SimulatorVirusStage(virusId, order++, SimulatorDataConstant.InfectionStage_Well, 0, 0));
+            virusStages.Add(new SimulatorVirusStage(virusId, order++, SimulatorDataConstant.InfectionStage_Infected, 3, 3));
+            virusStages.Add(new SimulatorVirusStage(virusId, order++, SimulatorDataConstant.InfectionStage_Incubation, 3, 7));
+            virusStages.Add(new SimulatorVirusStage(virusId, order++, SimulatorDataConstant.InfectionStage_Symptomatic, 6, 11));
+            virusStages.Add(new SimulatorVirusStage(virusId, order++, SimulatorDataConstant.InfectionStage_Immune, 0, 0));
+
+            int id = 1;
+            foreach (var vs in virusStages.OrderBy(f => f.StageOrder))
+            {
+                vs.Id = id++;
+            }
+
+            return virusStages;
+        }
+
         static async Task<IList<SimulatorEmployee>> GetEmployeesAsync(SimulatorDataStore simDataStore, int count, bool getFromFile)
         {
             string employeesJson = null;
@@ -204,6 +254,7 @@ namespace WorkplaceOutbreakSimulatorConsole
             {
                 results = results.Take(count).ToList();
             }
+
             return results;
         }
 
