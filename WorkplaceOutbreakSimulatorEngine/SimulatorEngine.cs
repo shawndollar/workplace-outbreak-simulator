@@ -14,7 +14,8 @@ namespace WorkplaceOutbreakSimulatorEngine
     {
 
         #region Fields
-        
+
+        private readonly object _randomLockObject = new object();
         private DateTime _simulatorDateTime;
         private int _dataIntervalTotalCount;
         private int _dataIntervalDuringWorkDayCount;
@@ -218,47 +219,54 @@ namespace WorkplaceOutbreakSimulatorEngine
                 }
             }
         }
-                
+
         /// <summary>
         /// Move random employees to meeting locations.
         /// </summary>
         /// <param name="meetingRoom">The meeting room to move employees into.</param>
         private void MoveEmployeesToMeeting(SimulatorWorkplaceRoom meetingRoom)
-        {            
-            int minAttendees = Configuration.MinMeetingAttendance;
-            int maxAttendees = Configuration.MaxMeetingAttendance;
-            Random random = new Random();
-            int meetingAttendanceSize = random.Next(minAttendees, maxAttendees + 1);
-
-            // Get all nonemployees who are in their offices.
-            int[] employeesInOffice = (from e in Configuration.Employees
-                                     where !e.IsOutSick && e.CurrentRoomId == e.OfficeId
-                                     select e.Id).ToArray();
-
-            if (employeesInOffice.Length < minAttendees)
+        {
+            try
             {
-                // if not enough people to fill a meeting, then quit now
-                return;
-            }
+                int minAttendees = Configuration.MinMeetingAttendance;
+                int maxAttendees = Configuration.MaxMeetingAttendance;
+                
+                int meetingAttendanceSize = GetRandomNumber(minAttendees, maxAttendees + 1);
 
-            IList<int> meetingAttendees = new List<int>();
+                // Get all nonemployees who are in their offices.
+                int[] employeesInOffice = (from e in Configuration.Employees
+                                           where !e.IsOutSick && e.CurrentRoomId == e.OfficeId
+                                           select e.Id).ToArray();
 
-            // Grab random employees and add them to meeting attendee list.
-            // There's danger of a slow loop here, but it's highly unlikely.
-            while (meetingAttendees.Count < meetingAttendanceSize)
-            {
-                int id = random.Next(employeesInOffice.Length);
-                if (!meetingAttendees.Contains(id))
+                if (employeesInOffice.Length < minAttendees)
                 {
-                    meetingAttendees.Add(id);
+                    // if not enough people to fill a meeting, then quit now
+                    return;
+                }
+
+                IList<int> meetingAttendees = new List<int>();
+
+                // Grab random employees and add them to meeting attendee list.
+                // There's danger of a slow loop here, but it's highly unlikely.
+                while (meetingAttendees.Count < meetingAttendanceSize)
+                {
+                    int idIndex = GetRandomNumber(0, employeesInOffice.Length);
+                    if (!meetingAttendees.Contains(idIndex))
+                    {
+                        meetingAttendees.Add(employeesInOffice[idIndex]);
+                    }
+                }
+
+                // Finally, update our meeting employees' current room IDs to the selected meeting room.
+                foreach (var employeeId in meetingAttendees)
+                {
+                    var employee = Configuration.Employees.First(f => f.Id == employeeId);
+                    employee.CurrentRoomId = meetingRoom.Id;
                 }
             }
-
-            // Finally, update our meeting employees' current room IDs.
-            foreach (var employeeId in meetingAttendees)
+            catch (Exception exc)
             {
-                var employee = Configuration.Employees.First(f => f.Id == employeeId);
-                employee.CurrentRoomId = meetingRoom.Id;
+                throw new Exception($"Unable to move employees to meeting room {meetingRoom.Id}: {exc.Message}", exc);
             }
 
         }
@@ -269,18 +277,43 @@ namespace WorkplaceOutbreakSimulatorEngine
         /// <param name="employee">The employee to move. The CurrentRoomId will be updated.</param>
         private void MoveEmployeeToBreakroom(SimulatorEmployee employee)
         {
-            int floorId = Configuration.WorkplaceRooms.First(f => f.Id == employee.OfficeId).FloorId;
-            IList<SimulatorWorkplaceRoom> availableBreakRooms = Configuration.WorkplaceRooms.Where(f => f.FloorId == floorId && f.RoomType == SimulatorDataConstant.WorkplaceRoomType_Breakroom).ToList();
-            if (availableBreakRooms.Count == 1)
+            try
             {
-                // If only one break room on this floor, then put them in there.
-                employee.CurrentRoomId = availableBreakRooms[0].Id;
+                IList<SimulatorWorkplaceRoom> availableBreakRooms = GetBreakroomsforEmployee(employee);
+                if (availableBreakRooms.Count == 1)
+                {
+                    // If only one break room, then put them right in there.
+                    employee.CurrentRoomId = availableBreakRooms[0].Id;
+                }
+                else
+                {
+                    // If more than one break room, then pick random one.                    
+                    employee.CurrentRoomId = availableBreakRooms[GetRandomNumber(0, availableBreakRooms.Count)].Id;
+                }
+            }
+            catch (Exception exc)
+            {
+                throw new Exception($"Unable to move employee {employee.Id} to a breakroom: {exc.Message}", exc);
+            }
+        }
+
+        /// <summary>
+        /// This is used to select a break room for an employee. Try to get one on the employee's floor first.
+        /// If not possible, then just return the break rooms.
+        /// </summary>
+        /// <param name="employee">The employee for whom we want to find a breakroom.</param>
+        /// <returns>A list of breakrooms that the employee can </returns>
+        private IList<SimulatorWorkplaceRoom> GetBreakroomsforEmployee(SimulatorEmployee employee)
+        {
+            int floorId = Configuration.WorkplaceRooms.First(f => f.Id == employee.OfficeId).FloorId;
+            IList<SimulatorWorkplaceRoom> availableBreakRooms = Configuration.WorkplaceRooms.Where(f => f.RoomType == SimulatorDataConstant.WorkplaceRoomType_Breakroom).ToList();
+            if (availableBreakRooms.Any(f => f.FloorId == floorId))
+            {
+                return availableBreakRooms.Where(f => f.FloorId == floorId).ToList();
             }
             else
             {
-                // If more than one break room, then pick random one.
-                Random random = new Random();
-                employee.CurrentRoomId = availableBreakRooms[random.Next(0, availableBreakRooms.Count)].Id;
+                return availableBreakRooms;
             }
         }
 
@@ -365,7 +398,7 @@ namespace WorkplaceOutbreakSimulatorEngine
             // Pick a random number between 1 and 1000 and see if it's within our test rate. 
             // Example: There is a 25% (.25*1000) chance that the number will be between 1 and 250.
             // Multiply by 1000 instead of 100 just in case test rate is has thousandths place (which is very likely). It'll be more exact.
-            int randomNumber = _random.Next(1, 1001);
+            int randomNumber = GetRandomNumber(1, 1001);
             return randomNumber <= Convert.ToInt32(Configuration.Virus.TestRate * 1000);
         }
 
@@ -380,7 +413,7 @@ namespace WorkplaceOutbreakSimulatorEngine
             // Pick a random number between 1 and 1000 and see if it's within our infection rate. 
             // Example: There is a 25% (.25*1000) chance that the number will be between 1 and 250.
             // Multiply by 1000 instead of 100 just in case rate is has thousandths place (which is very likely). It'll be more exact.
-            int randomNumber = _random.Next(1, 1001);
+            int randomNumber = GetRandomNumber(1, 1001);
             return randomNumber <= Convert.ToInt32(Configuration.Virus.InfectionRate * 1000);
         }
 
@@ -453,10 +486,25 @@ namespace WorkplaceOutbreakSimulatorEngine
                 return SimulatorDateTime.AddDays(virusStage.MinDays);
             }
 
-            // If it's a range, then we need to get a random number between the min and max.
-            Random random = new Random();
-            var randomDays = random.Next(virusStage.MinDays, virusStage.MaxDays + 1);
+            // If it's a range, then we need to get a random number between the min and max.            
+            var randomDays = GetRandomNumber(virusStage.MinDays, virusStage.MaxDays + 1);
             return SimulatorDateTime.AddDays(randomDays);
+        }
+
+        /// <summary>
+        /// Get a random number from our Random object. We'll be cautious and make sure only one thread is accessing our Random object.
+        /// </summary>
+        /// <param name="min">This is the min number that can be returned.</param>
+        /// <param name="max">Only numbers less than this number can be returned.</param>
+        /// <returns>A random integer within the min and max as explained.</returns>
+        private int GetRandomNumber(int min, int max)
+        {
+            int number;
+            lock (_randomLockObject)
+            {
+                number = _random.Next(min, max);
+            }
+            return number;
         }
 
         #endregion Methods
