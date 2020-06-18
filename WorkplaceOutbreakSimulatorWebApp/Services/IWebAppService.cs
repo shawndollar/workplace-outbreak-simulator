@@ -10,7 +10,7 @@ namespace WorkplaceOutbreakSimulatorWebApp.Services
     {
         public string WebApplicationTitle { get; }
 
-        public string SimulatorPage { get => "Simulator/Index"; }
+        public string SimulatorPage { get; }
 
     }
 }
