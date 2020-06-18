@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using WorkplaceOutbreakSimulatorEngine.DataRepository;
 using WorkplaceOutbreakSimulatorEngine.Models;
 
 namespace WorkplaceOutbreakSimulatorEngine
@@ -30,7 +31,7 @@ namespace WorkplaceOutbreakSimulatorEngine
 
         #region Properties
 
-        public SimulatorConfiguration Configuration { get; }
+        public SimulatorConfiguration Configuration { get; private set; }
 
         public DateTime SimulatorDateTime
         {
@@ -142,7 +143,60 @@ namespace WorkplaceOutbreakSimulatorEngine
 
             return employeeContacts;
         }
-                
+
+        public bool IsInfectionComplete()
+        {
+            int totalInfected = (from e in Configuration.Employees
+                                 join v in Configuration.VirusStages
+                                 on e.VirusStageId equals v.Id
+                                 where v.IsInfected
+                                 select e).Count();
+
+            return totalInfected == Configuration.Employees.Count;
+        }
+
+        /// <summary>
+        /// Allow certain fields to be changed in the configuration for now.
+        /// </summary>
+        /// <param name="startDate">Start Date of the simulation.</param>
+        /// <param name="endDate">End Date of the simulation.</param>
+        /// <param name="infectionRate">The infection rate.</param>
+        /// <param name="testRate">The virus test rate.</param>
+        /// <param name="testResultTime">The time to wait for test results.</param>
+        /// <param name="recoveryDays">The recovery days (time off of work).</param>
+        public void UpdateConfiguration(DateTime? startDate, DateTime? endDate, decimal? infectionRate, decimal? testRate, TimeSpan? testResultTime, int? recoveryDays)
+        {
+            if (startDate != null)
+            {
+                Configuration.StartDateTime = SimulatorConfigManager.GetDateBoundary(startDate.Value, Configuration.StartOfWorkday);
+            }
+            if (endDate != null)
+            {
+                Configuration.EndDateTime = SimulatorConfigManager.GetDateBoundary(endDate.Value, Configuration.EndOfWorkday);
+            }
+            if (infectionRate != null)
+            {
+                Configuration.Virus.InfectionRate = infectionRate.Value;
+            }
+            if (testRate != null)
+            {
+                Configuration.Virus.TestRate = testRate.Value;
+            }
+            if (testResultTime != null && testResultTime != TimeSpan.Zero)
+            {
+                Configuration.Virus.TestResultWaitTime = testResultTime.Value;
+            }
+            if (recoveryDays != null)
+            {
+                Configuration.Virus.RecoveryDays = recoveryDays.Value;
+            }
+        }
+
+        public void UpdateConfiguration(SimulatorConfiguration configuration)
+        {
+            Configuration = configuration;
+        }
+
         /// <summary>
         /// Create a list of employee contact records for every employee.
         /// </summary>
@@ -633,18 +687,6 @@ namespace WorkplaceOutbreakSimulatorEngine
                 throw new Exception($"Unable to set initial infected employees: {exc.Message}", exc);
             }
         }
-
-        public bool IsInfectionComplete()
-        {
-            int totalInfected = (from e in Configuration.Employees
-                                 join v in Configuration.VirusStages
-                                 on e.VirusStageId equals v.Id
-                                 where v.IsInfected
-                                 select e).Count();
-
-            return totalInfected == Configuration.Employees.Count;
-        }
-
 
         #endregion Methods
     }

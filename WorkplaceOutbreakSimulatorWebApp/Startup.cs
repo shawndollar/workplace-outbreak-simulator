@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using WorkplaceOutbreakSimulatorEngine;
+using WorkplaceOutbreakSimulatorEngine.DataRepository;
 using WorkplaceOutbreakSimulatorWebApp.Services;
 
 namespace WorkplaceOutbreakSimulatorWebApp
@@ -21,11 +23,18 @@ namespace WorkplaceOutbreakSimulatorWebApp
 
         public IConfiguration Configuration { get; }
 
+        private SimulatorEngine GetSimulatorEngineInstance()
+        {
+            SimulatorConfiguration sc = SimulatorConfigManager.GetDefaultConfiguration();
+            return new SimulatorEngine(sc);
+        }
+
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddRazorPages();
             services.AddSingleton<IWebAppService, WebAppService>();
+            services.AddSingleton<SimulatorEngine>(GetSimulatorEngineInstance());
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

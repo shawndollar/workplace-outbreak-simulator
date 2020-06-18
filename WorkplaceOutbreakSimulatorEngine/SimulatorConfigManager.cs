@@ -23,15 +23,11 @@ namespace WorkplaceOutbreakSimulatorEngine.DataRepository
 
             // Set start of simulation to the current date.
             // Begin with start of workday on first day and end at end of workday on last day.
-            {
-                DateTime now = DateTime.Now;
-                configuration.StartDateTime = new DateTime(now.Year, now.Month, now.Day, configuration.StartOfWorkday.Hours, configuration.StartOfWorkday.Minutes, configuration.StartOfWorkday.Seconds);
-            }
+            configuration.StartDateTime = GetDateBoundary(DateTime.Now, configuration.StartOfWorkday);
 
             // Four month time span and set the time to the end of the work day.
-            configuration.EndDateTime = configuration.StartDateTime.AddMonths(4);
-            configuration.EndDateTime = new DateTime(configuration.EndDateTime.Year, configuration.EndDateTime.Month, configuration.EndDateTime.Day, configuration.EndOfWorkday.Hours, configuration.EndOfWorkday.Minutes, configuration.EndOfWorkday.Seconds);
-
+            configuration.EndDateTime = GetDateBoundary(configuration.StartDateTime.AddMonths(4), configuration.EndOfWorkday);
+            
             // Number of people to be sick initially.
             configuration.InitialSickCount = 1;
 
@@ -199,6 +195,11 @@ namespace WorkplaceOutbreakSimulatorEngine.DataRepository
                     unfilledFloors.Remove(floorNumber);
                 }
             }
+        }
+
+        public static DateTime GetDateBoundary(DateTime startDate, TimeSpan timeSpan)
+        {
+            return new DateTime(startDate.Year, startDate.Month, startDate.Day, timeSpan.Hours, timeSpan.Minutes, timeSpan.Seconds);
         }
 
         #endregion Methods
