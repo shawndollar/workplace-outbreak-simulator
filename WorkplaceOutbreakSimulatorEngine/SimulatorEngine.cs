@@ -222,12 +222,16 @@ namespace WorkplaceOutbreakSimulatorEngine
         /// </summary>
         private void TestSickEmployees()
         {
-            foreach (var employee in Configuration.Employees.Where(f => !f.IsOutSick && IsEmployeeSick(f)))
+            foreach (var employee in Configuration.Employees.Where(f => !f.IsOutSick && IsEmployeeSick(f) && !f.DoNotTest))
             {
                 if (DoTestEmployee(employee))
                 {
                     employee.InfectionTestDateTime = SimulatorDateTime;
                     employee.InfectiontTestResult = SimulatorDataConstant.InfectionTestResult_Pending;
+                }
+                else
+                {
+                    employee.DoNotTest = true;
                 }
             }
         }

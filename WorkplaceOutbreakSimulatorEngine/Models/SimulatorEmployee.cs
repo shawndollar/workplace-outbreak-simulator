@@ -54,6 +54,8 @@ namespace WorkplaceOutbreakSimulatorEngine.Models
 
         public DateTime? InfectionTestDateTime { get; set; }
 
+        public bool DoNotTest { get; set; }
+
         public int? CurrentRoomId { get; set; }
 
         public override string ToString()
