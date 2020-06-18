@@ -20,6 +20,11 @@ namespace WorkplaceOutbreakSimulatorWebApp.Model
         public DateTime? EndDate { get; set; }
 
         [Required]
+        [Display(Name = "Required Sick Leave Days")]
+        [Range(5, 30, ErrorMessage = "The Required Sick Leave Days must be between 5 and 30.")]
+        public int? RequiredSickLeaveDays { get; set; }
+
+        [Required]
         [Display(Name ="Virus Infection Rate")]
         [Range(1, 100, ErrorMessage = "The Virus Infection Rate must be between 1 and 100.")]
         public int? InfectionRate { get; set; }

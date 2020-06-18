@@ -40,10 +40,16 @@
                 <input type="number" min="0" max="23" asp-for="ConfigData.TestResultWaitHours" class="form-control" />
             </div>
         </div>
+        <div class="form-row">
+            <div class="form-group col-md-3">
+                <label asp-for="ConfigData.RequiredSickLeaveDays"></label>
+                <input type="number" min="5" max="30" asp-for="ConfigData.RequiredSickLeaveDays" class="form-control" />
+            </div>
+        </div>
         <br />
         <div class="form-group row">
             <div class="col-4">
-                <input type="submit" value="Run Simulation" class="btn btn-primary form-control" />
+                <input type="submit" value="Run Outbreak Simulation" class="btn btn-primary form-control" />
             </div>
             <div class="col-4">
                 <a asp-page="Index" class="btn btn-success form-control">Reset Form</a>

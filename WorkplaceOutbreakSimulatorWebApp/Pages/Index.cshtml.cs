@@ -55,6 +55,7 @@ namespace WorkplaceOutbreakSimulatorWebApp.Pages
             TimeSpan ts = defaultConfig.Virus.TestResultWaitTime;
             ConfigData.TestResultWaitDays = ts.Days;
             ConfigData.TestResultWaitHours = ts.Hours;
+            ConfigData.RequiredSickLeaveDays = defaultConfig.Virus.RecoveryDays;
             await Task.CompletedTask;
         }
 
