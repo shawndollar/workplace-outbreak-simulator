@@ -69,7 +69,8 @@ namespace WorkplaceOutbreakSimulatorConsole
             }
 
             //await CreateSimulatorCsvLogAsync(allEmployeeContacts, simConfig.Employees, simConfig.WorkplaceRooms, simConfig.VirusStages, csvOutputFile);
-            await CreateSimulatorCsvLogAsync(allEmployeeContacts.Where(f => f.EmployeeId == allEmployeeContacts[0].EmployeeId).ToList(), simConfig.Employees, simConfig.WorkplaceRooms, simConfig.VirusStages, csvOutputFile2);
+            //await CreateSimulatorCsvLogAsync(allEmployeeContacts.Where(f => f.EmployeeId == allEmployeeContacts[0].EmployeeId).ToList(), simConfig.Employees, simConfig.WorkplaceRooms, simConfig.VirusStages, csvOutputFile2);
+            //await CreateSimulatorCsvLogAsync(allEmployeeContacts.Where(f => f.EmployeeId == simConfig.Employees.First(e => e.VirusStageId < 5).Id).ToList(), simConfig.Employees, simConfig.WorkplaceRooms, simConfig.VirusStages, csvOutputFile2);
         }
 
         /// <summary>
@@ -183,11 +184,6 @@ namespace WorkplaceOutbreakSimulatorConsole
             floorNumberPeopleCountDict.Add(3, 150);
             floorNumberPeopleCountDict.Add(4, 150);
             floorNumberPeopleCountDict.Add(5, 50);
-            //floorNumberPeopleCountDict.Add(1, 1);
-            //floorNumberPeopleCountDict.Add(2, 1);
-            //floorNumberPeopleCountDict.Add(3, 1);
-            //floorNumberPeopleCountDict.Add(4, 1);
-            //floorNumberPeopleCountDict.Add(5, 1);
 
             simConfig.WorkplaceFloors = GetWorkplaceFloors(simConfig.Workplace.Id, floorCount); // add 5 floors, assume contiguous
 

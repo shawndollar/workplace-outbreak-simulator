@@ -1,14 +1,7 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Security.Cryptography.X509Certificates;
-using System.Threading.Tasks;
 using WorkplaceOutbreakSimulatorEngine.Models;
-using WorkplaceOutbreakSimulatorEngine.Helpers;
-
 
 namespace WorkplaceOutbreakSimulatorEngine
 {
@@ -92,9 +85,7 @@ namespace WorkplaceOutbreakSimulatorEngine
                     UpdateEmployeesLocations();
                     if (IsWorkTime())
                     {
-                        // deal with all employee contacts                        
-                        var contacts = SimulateEmployeeContacts();
-                        result.EmployeeContacts = contacts;
+                        result.EmployeeContacts = SimulateEmployeeContacts();
                     }
                     AdvanceSimulatorDateTime();
                 }
@@ -190,8 +181,8 @@ namespace WorkplaceOutbreakSimulatorEngine
         /// </summary>
         private void AdvanceEmployeesVirusStages()
         {
-            // Update all employees who have a scheduled virus status change at this time.
-            foreach (var employee in Configuration.Employees.Where(f => f.ScheduledVirusStageChangeDateTime == SimulatorDateTime))
+            // Update all employees who have a scheduled virus status change at this time (or already past).
+            foreach (var employee in Configuration.Employees.Where(f => f.ScheduledVirusStageChangeDateTime <= SimulatorDateTime))
             {            
                 IncrementEmployeeVirusStage(employee);
             }
