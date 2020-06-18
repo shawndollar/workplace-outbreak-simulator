@@ -12,61 +12,24 @@ namespace WorkplaceOutbreakSimulatorWebApp.Pages
 {
     public class IndexModel : PageModel
     {
-        //#region Fields
 
-        //private readonly ILogger<IndexModel> _logger;
-        //private readonly IWebAppService _webAppService;
-        //private readonly SimulatorEngine _simulatorEngine;
+        private readonly IWebAppService _webAppService;
 
-        //#endregion Fields
-
-        //#region Properties
-
-        //[BindProperty]
-        //public ConfigData ConfigData { get; set; }               
-
-        //[BindProperty]
-        //public string PageTitle { get => _webAppService.WebApplicationTitle; }
-
-        //#endregion Properties
-
-        //#region Constructor
-
-        //public IndexModel(ILogger<IndexModel> logger, IWebAppService webAppService, SimulatorEngine simulatorEngine)
-        //{
-        //    _logger = logger;
-        //    _webAppService = webAppService;
-        //    _simulatorEngine = simulatorEngine;
-        //}
-
-        //#endregion Constructor
+        [BindProperty]
+        public string PageTitle { get => _webAppService.WebApplicationTitle; }
 
         #region Handlers
+
+        public IndexModel(IWebAppService webAppService)
+        {
+            _webAppService = webAppService;
+        }
 
         public async Task<IActionResult> OnGet()
         {
             await Task.CompletedTask;
-            return RedirectToPage("Simulator/Index");
+            return RedirectToPage(_webAppService?.SimulatorPage);
         }
-
-        //public async Task<IActionResult> OnPost()
-        //{
-        //    if (!ModelState.IsValid)
-        //    {
-        //        return Page();
-        //    }
-
-        //    _simulatorEngine.UpdateConfiguration(ConfigData.StartDate, 
-        //        ConfigData.EndDate, 
-        //        Convert.ToDecimal(ConfigData.InfectionRate)/100, 
-        //        Convert.ToDecimal(ConfigData.TestRate)/100, 
-        //        new TimeSpan(ConfigData.TestResultWaitDays.Value, ConfigData.TestResultWaitHours.Value, 0, 0), 
-        //        ConfigData.RequiredSickLeaveDays);
-
-        //    await Task.CompletedTask;
-
-        //    return Page();
-        //}
 
         #endregion Handlers
     }
