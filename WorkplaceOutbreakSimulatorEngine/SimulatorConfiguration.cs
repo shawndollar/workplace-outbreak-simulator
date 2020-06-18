@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using WorkplaceOutbreakSimulatorEngine.Models;
 
@@ -32,6 +33,14 @@ namespace WorkplaceOutbreakSimulatorEngine
         public string InitialSickStage { get; set; }
 
         public IDictionary<int, int> FloorPeopleMapping { get; set; }
+
+        public int TotalPeople
+        {
+            get
+            {
+                return FloorPeopleMapping?.Sum(f => f.Value) ?? 0;
+            }
+        }
 
         public IList<SimulatorEmployee> Employees { get; set; } = new List<SimulatorEmployee>();
 

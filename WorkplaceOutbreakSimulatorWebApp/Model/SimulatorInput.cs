@@ -1,13 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using System.ComponentModel.DataAnnotations;
 
 namespace WorkplaceOutbreakSimulatorWebApp.Model
 {
-    public class ConfigData
+    public class SimulatorInput
     {
+
+        #region Properties
 
         [Required]
         [Display(Name = "Start Date")]
@@ -25,7 +24,7 @@ namespace WorkplaceOutbreakSimulatorWebApp.Model
         public int? RequiredSickLeaveDays { get; set; }
 
         [Required]
-        [Display(Name ="Virus Infection Rate")]
+        [Display(Name = "Virus Infection Rate")]
         [Range(1, 100, ErrorMessage = "The Virus Infection Rate must be between 1 and 100.")]
         public int? InfectionRate { get; set; }
 
@@ -37,7 +36,7 @@ namespace WorkplaceOutbreakSimulatorWebApp.Model
         [Display(Name = "Virus Test Result Wait Days")]
         [Range(0, 31, ErrorMessage = "The Virus Test Result Wait Days must be between 0 and 31.")]
         public int? TestResultWaitDays { get; set; }
-                
+
         [Display(Name = "Virus Test Result Wait Hours")]
         [Range(0, 23, ErrorMessage = "The Virus Test Result Wait Hours must be between 0 and 23.")]
         public int? TestResultWaitHours { get; set; }
@@ -63,5 +62,8 @@ namespace WorkplaceOutbreakSimulatorWebApp.Model
                 return 1;
             }
         }
+
+        #endregion Properties
+
     }
 }

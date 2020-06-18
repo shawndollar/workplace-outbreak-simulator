@@ -8,7 +8,7 @@ using WorkplaceOutbreakSimulatorEngine.Models;
 
 namespace WorkplaceOutbreakSimulatorEngine.DataRepository
 {
-    public class EmployeeDataSource
+    public class EmployeeDataSource : IEmployeeDataSource
     {                
         public string DataApiKey { get; }
 
@@ -39,10 +39,9 @@ namespace WorkplaceOutbreakSimulatorEngine.DataRepository
             }
         }
 
-        private string GetApiUrl(int count)
+        public string GetApiUrl(int count)
         {
             return $"{DataApiEndpoint}?count={count}&key={DataApiKey}";
         }
-
     }
 }

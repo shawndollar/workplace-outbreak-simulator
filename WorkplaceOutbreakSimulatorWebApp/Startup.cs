@@ -29,14 +29,22 @@ namespace WorkplaceOutbreakSimulatorWebApp
             return new SimulatorEngine(sc);
         }
 
+        private EmployeeDataSource GetEmployeeDataSourceInstance()
+        {
+            const string section = "AppSettings:EmployeeDataSource";
+            string apiUri = Configuration[$"{section}:ApiUri"];
+            string apiKey = Configuration[$"{section}:ApiKey"];
+            return new EmployeeDataSource(apiUri, apiKey);
+        }
+
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddRazorPages();
+            services.AddSingleton<IEmployeeDataSource>(GetEmployeeDataSourceInstance());
             services.AddSingleton<IWebAppService, WebAppService>();
             services.AddSingleton<SimulatorEngine>(GetSimulatorEngineInstance());
         }
-
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
