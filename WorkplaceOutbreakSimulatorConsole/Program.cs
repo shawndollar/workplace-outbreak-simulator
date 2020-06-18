@@ -46,17 +46,17 @@ namespace WorkplaceOutbreakSimulatorConsole
                 {
                     simulatorResult = simEngine.RunNext();
 
-                    sw.WriteLine(simEngine.SimulatorDateTime + " Infected: " + (from e in simConfig.Employees
-                                                                                join v in simConfig.VirusStages
-                                                                                on e.VirusStageId equals v.Id
-                                                                                where v.IsInfected
-                                                                                select e).Count() + " Immune: " +
-                                                                                (from e in simConfig.Employees
-                                                                                 join v in simConfig.VirusStages
-                                                                                 on e.VirusStageId equals v.Id
-                                                                                 where v.InfectionStage ==
-                                                                                 SimulatorDataConstant.InfectionStage_Immune
-                                                                                 select e).Count());
+                    //sw.WriteLine(simEngine.SimulatorDateTime + " Infected: " + (from e in simConfig.Employees
+                    //                                                            join v in simConfig.VirusStages
+                    //                                                            on e.VirusStageId equals v.Id
+                    //                                                            where v.IsInfected
+                    //                                                            select e).Count() + " Immune: " +
+                    //                                                            (from e in simConfig.Employees
+                    //                                                             join v in simConfig.VirusStages
+                    //                                                             on e.VirusStageId equals v.Id
+                    //                                                             where v.InfectionStage ==
+                    //                                                             SimulatorDataConstant.InfectionStage_Immune
+                    //                                                             select e).Count());
                     allEmployeeContacts.AddRange(simulatorResult.EmployeeContacts);
                 }
                 while (!simulatorResult.IsSimulatorComplete && !simulatorResult.HasError);
@@ -69,8 +69,7 @@ namespace WorkplaceOutbreakSimulatorConsole
             }
 
             //await CreateSimulatorCsvLogAsync(allEmployeeContacts, simConfig.Employees, simConfig.WorkplaceRooms, simConfig.VirusStages, csvOutputFile);
-            //await CreateSimulatorCsvLogAsync(allEmployeeContacts.Where(f => f.EmployeeId == allEmployeeContacts[0].EmployeeId).ToList(), 
-            //    simConfig.Employees, simConfig.WorkplaceRooms, simConfig.VirusStages, csvOutputFile2);
+            await CreateSimulatorCsvLogAsync(allEmployeeContacts.Where(f => f.EmployeeId == allEmployeeContacts[0].EmployeeId).ToList(), simConfig.Employees, simConfig.WorkplaceRooms, simConfig.VirusStages, csvOutputFile2);
         }
 
         /// <summary>
@@ -99,7 +98,7 @@ namespace WorkplaceOutbreakSimulatorConsole
                 d.ContactDateTime = contact.ContactDateTime;
                 d.EmployeeId = employee?.Id;
                 d.Name = employee?.FullName;
-                d.Gender = employee?.Gender;
+                // d.Gender = employee?.Gender;
                 d.RoomId = contact.RoomId;
                 d.RoomType = (workplaceRoom == null) ? "None" : workplaceRoom.RoomType;
                 d.VirusStatus = virusStage?.InfectionStage;

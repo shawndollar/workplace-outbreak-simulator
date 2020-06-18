@@ -129,15 +129,15 @@ namespace WorkplaceOutbreakSimulatorEngine
             {
                 // Now retrieve all employees in the same room (except the employee herself).
                 var contactedEmployees = Configuration.Employees.Where(f => !f.IsOutSick && f.CurrentRoomId == currentEmployee.Employee.CurrentRoomId && f.Id != currentEmployee.Employee.Id);
-                
-                // Loop through each contacted employee and determine if he/she was infected.
+                bool isEmployeeContagious = IsVirusStageContagious(currentEmployee.Employee.VirusStageId);
+                // Loop through each contacted contacted employee.
                 foreach (var contactedEmployee in contactedEmployees)
                 {
                     // Always add each contacted employee to the employee's employee contact list.
                     currentEmployee.EmployeeContact.EmployeeContacts.Add(GetEmployeeContactFromEmployee(contactedEmployee));
 
                     // If the employee is contagious and the contact is well, then check to see if an infection occurred.
-                    if (IsVirusStageContagious(currentEmployee.Employee.VirusStageId) && IsVirusStageContagious(contactedEmployee.VirusStageId))
+                    if (isEmployeeContagious && IsVirusStageWell(contactedEmployee.VirusStageId))
                     {
                         // Check to see if infection caused (random).
                         if (IsContactInfectious())
