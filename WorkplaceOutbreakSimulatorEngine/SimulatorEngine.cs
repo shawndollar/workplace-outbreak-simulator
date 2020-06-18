@@ -94,7 +94,7 @@ namespace WorkplaceOutbreakSimulatorEngine
                     {
                         // deal with all employee contacts                        
                         var contacts = SimulateEmployeeContacts();
-                        result.EmployeeContacts.AddRange(contacts);
+                        result.EmployeeContacts = contacts;
                     }
                     AdvanceSimulatorDateTime();
                 }
@@ -120,26 +120,24 @@ namespace WorkplaceOutbreakSimulatorEngine
             IList<SimulatorEmployeeContact> employeeContacts = InitializeEmployeeContacts();
             SimulatorVirusStage infectedStage = Configuration.VirusStages.First(f => f.InfectionStage == SimulatorDataConstant.InfectionStage_Infected);
 
-            // Now we need to retrieve all of the employees that each employee contacted.
-            foreach (var currentEmployee in Configuration.Employees)
+            // Now we need to retrieve all of the employees that each employee contacted. Exclude employees that are out sick
+            foreach (var currentEmployee in (from e in Configuration.Employees
+                                             join ec in employeeContacts
+                                             on e.Id equals ec.EmployeeId
+                                             where !e.IsOutSick
+                                             select new { Employee = e, EmployeeContact = ec }))
             {
-                if (currentEmployee.IsOutSick)
-                {
-                    // If the employee is out sick, then we do not need to check for any more contacts.
-                    continue;
-                }
-
                 // Now retrieve all employees in the same room (except the employee herself).
-                var contactedEmployees = Configuration.Employees.Where(f => !f.IsOutSick && f.CurrentRoomId == currentEmployee.CurrentRoomId && f.Id != currentEmployee.Id).ToList();
-
+                var contactedEmployees = Configuration.Employees.Where(f => !f.IsOutSick && f.CurrentRoomId == currentEmployee.Employee.CurrentRoomId && f.Id != currentEmployee.Employee.Id);
+                
                 // Loop through each contacted employee and determine if he/she was infected.
                 foreach (var contactedEmployee in contactedEmployees)
                 {
                     // Always add each contacted employee to the employee's employee contact list.
-                    employeeContacts.First(f => f.EmployeeId == currentEmployee.Id).EmployeeContacts.Add(GetEmployeeContactFromEmployee(contactedEmployee));
+                    currentEmployee.EmployeeContact.EmployeeContacts.Add(GetEmployeeContactFromEmployee(contactedEmployee));
 
                     // If the employee is contagious and the contact is well, then check to see if an infection occurred.
-                    if (IsEmployeeContagious(currentEmployee) && IsEmployeeWell(contactedEmployee))
+                    if (IsVirusStageContagious(currentEmployee.Employee.VirusStageId) && IsVirusStageContagious(contactedEmployee.VirusStageId))
                     {
                         // Check to see if infection caused (random).
                         if (IsContactInfectious())
@@ -160,7 +158,7 @@ namespace WorkplaceOutbreakSimulatorEngine
         /// <returns>List of EmployeeContact records for every employee. You can fill it out as needed.</returns>
         private IList<SimulatorEmployeeContact> InitializeEmployeeContacts()
         {
-            IList<SimulatorEmployeeContact> employeeContacts = new List<SimulatorEmployeeContact>();
+            IList<SimulatorEmployeeContact> employeeContacts = new List<SimulatorEmployeeContact>(Configuration.Employees.Count);
 
             foreach (var employee in Configuration.Employees)
             {
@@ -418,9 +416,9 @@ namespace WorkplaceOutbreakSimulatorEngine
         /// </summary>
         /// <param name="employee">The employee to check.</param>
         /// <returns>Return if the employee is in a stage that is counted as contagious.</returns>
-        private bool IsEmployeeContagious(SimulatorEmployee employee)
+        private bool IsVirusStageContagious(int virusStageId)
         {
-            var virusStage = Configuration.VirusStages.FirstOrDefault(f => f.Id == employee.VirusStageId);
+            var virusStage = Configuration.VirusStages.FirstOrDefault(f => f.Id == virusStageId);
             return virusStage != null && virusStage.IsContagious;
         }
 
@@ -451,9 +449,9 @@ namespace WorkplaceOutbreakSimulatorEngine
         /// </summary>
         /// <param name="employee">The employee to check.</param>
         /// <returns>Return if the employee is "well".</returns>
-        private bool IsEmployeeWell(SimulatorEmployee employee)
+        private bool IsVirusStageWell(int virusStageId)
         {
-            var virusStage = Configuration.VirusStages.FirstOrDefault(f => f.Id == employee.VirusStageId);
+            var virusStage = Configuration.VirusStages.FirstOrDefault(f => f.Id == virusStageId);
             return virusStage != null && virusStage.InfectionStage == SimulatorDataConstant.InfectionStage_Well;
         }
 

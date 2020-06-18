@@ -28,6 +28,7 @@ namespace WorkplaceOutbreakSimulatorConsole
             string outputFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "simulator_output.txt");
             
             string csvOutputFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "simulator_output.csv");
+            string csvOutputFile2 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "simulator_output2.csv");
 
             StreamWriter sw = new StreamWriter(outputFile);
 
@@ -60,14 +61,16 @@ namespace WorkplaceOutbreakSimulatorConsole
                 }
                 while (!simulatorResult.IsSimulatorComplete && !simulatorResult.HasError);
 
-                sw.WriteLine("Status " + !simulatorResult.HasError + " " + simulatorResult.ErrorMessage);                               
+                sw.WriteLine("Status " + DateTime.Now + " " + !simulatorResult.HasError + " " + simulatorResult.ErrorMessage);
             }
             finally
             {
                 sw.Close();
             }
 
-            await CreateSimulatorCsvLogAsync(allEmployeeContacts.Where(f => f.EmployeeId == allEmployeeContacts[0].EmployeeId).ToList(), simConfig.Employees, simConfig.WorkplaceRooms, simConfig.VirusStages, csvOutputFile);
+            //await CreateSimulatorCsvLogAsync(allEmployeeContacts, simConfig.Employees, simConfig.WorkplaceRooms, simConfig.VirusStages, csvOutputFile);
+            //await CreateSimulatorCsvLogAsync(allEmployeeContacts.Where(f => f.EmployeeId == allEmployeeContacts[0].EmployeeId).ToList(), 
+            //    simConfig.Employees, simConfig.WorkplaceRooms, simConfig.VirusStages, csvOutputFile2);
         }
 
         /// <summary>
@@ -95,13 +98,12 @@ namespace WorkplaceOutbreakSimulatorConsole
                 dynamic d = new ExpandoObject();
                 d.ContactDateTime = contact.ContactDateTime;
                 d.EmployeeId = employee?.Id;
-                d.FirstName = employee?.FirstName;
-                d.LastName = employee?.LastName;
+                d.Name = employee?.FullName;
                 d.Gender = employee?.Gender;
                 d.RoomId = contact.RoomId;
-                d.RoomType = workplaceRoom?.RoomType;
+                d.RoomType = (workplaceRoom == null) ? "None" : workplaceRoom.RoomType;
                 d.VirusStatus = virusStage?.InfectionStage;
-                for (int i = 0; i < contact.EmployeeContacts.Count; i++)
+                for (int i = 0; i < contact.EmployeeContacts?.Count; i++)
                 {
                     var contactEmployee = employees.FirstOrDefault(f => f.Id == contact.EmployeeContacts[i].EmployeeId);
                     AddDynamicProperty(d, $"Contact{i + 1}", contactEmployee.FullName);
@@ -182,6 +184,11 @@ namespace WorkplaceOutbreakSimulatorConsole
             floorNumberPeopleCountDict.Add(3, 150);
             floorNumberPeopleCountDict.Add(4, 150);
             floorNumberPeopleCountDict.Add(5, 50);
+            //floorNumberPeopleCountDict.Add(1, 1);
+            //floorNumberPeopleCountDict.Add(2, 1);
+            //floorNumberPeopleCountDict.Add(3, 1);
+            //floorNumberPeopleCountDict.Add(4, 1);
+            //floorNumberPeopleCountDict.Add(5, 1);
 
             simConfig.WorkplaceFloors = GetWorkplaceFloors(simConfig.Workplace.Id, floorCount); // add 5 floors, assume contiguous
 
