@@ -12,7 +12,7 @@ namespace WorkplaceOutbreakSimulatorEngine
         public TimeSpan EndOfWorkday { get; set; }
 
         public DateTime StartDateTime { get; set; }
-        
+
         public DateTime EndDateTime { get; set; }
 
         public TimeSpan DataInterval { get; set; }
@@ -30,6 +30,8 @@ namespace WorkplaceOutbreakSimulatorEngine
         public int InitialSickCount { get; set; }
 
         public string InitialSickStage { get; set; }
+
+        public IDictionary<int, int> FloorPeopleMapping { get; set; }
 
         public IList<SimulatorEmployee> Employees { get; set; } = new List<SimulatorEmployee>();
 

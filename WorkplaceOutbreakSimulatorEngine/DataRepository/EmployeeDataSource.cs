@@ -8,13 +8,13 @@ using WorkplaceOutbreakSimulatorEngine.Models;
 
 namespace WorkplaceOutbreakSimulatorEngine.DataRepository
 {
-    public class SimulatorDataStore
+    public class EmployeeDataSource
     {                
         public string DataApiKey { get; }
 
         public string DataApiEndpoint { get;  }
         
-        public SimulatorDataStore(string apiEndpoint, string dataApiKey)
+        public EmployeeDataSource(string apiEndpoint, string dataApiKey)
         {
             DataApiEndpoint = apiEndpoint;
             DataApiKey = dataApiKey;

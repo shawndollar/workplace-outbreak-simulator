@@ -7,12 +7,21 @@ namespace WorkplaceOutbreakSimulatorEngine.Models
     public class SimulatorVirus
     {
 
+        #region Constructor(s)
+
+        public SimulatorVirus()
+        {
+
+        }
+
         public SimulatorVirus(decimal infectionRate, decimal testRate, int recoveryDays)
         {
             InfectionRate = infectionRate;
             TestRate = testRate;
             RecoveryDays = recoveryDays;
         }
+
+        #endregion Constructor(s)
 
         public int Id { get; set; }
 
