@@ -16,69 +16,95 @@ using CsvHelper;
 using System.Globalization;
 using System.Dynamic;
 using System.ComponentModel.DataAnnotations;
+using System.Threading;
 
 namespace WorkplaceOutbreakSimulatorConsole
 {
     class Program
     {
-        public static async Task Main(string[] args)
+        public static async Task<int> Main(string[] args)
         {
-            bool useTestPersonFile = true;
-            
-            string outputFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "simulator_output.txt");
-            
-            string csvOutputFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "simulator_output.csv");
-            string csvOutputFile2 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "simulator_output2.csv");
+            LogMessage("INFO", "Starting Program");
 
-            StreamWriter sw = new StreamWriter(outputFile);
+            if (!IsInputValid(args))
+            {
+                return -1;
+            }
 
-            SimulatorConfiguration simConfig = await CreateConfiguration(useTestPersonFile);
-            SimulatorEngine simEngine = new SimulatorEngine(simConfig);
-            IList<SimulatorEmployeeContact> allEmployeeContacts = new List<SimulatorEmployeeContact>();
-            SimulatorResult simulatorResult = new SimulatorResult();
+            string outputFileLocation = args[0];
+            string csvOutputFile = GetOutputFileName();
+
+            if (!IsFileOutputFolderValid(outputFileLocation, csvOutputFile))
+            {
+                return -2;
+            }
+
+            string fullCsvOutputFilePath = Path.GetFullPath(Path.Combine(outputFileLocation, csvOutputFile));
+
+            LogMessage("INFO", fullCsvOutputFilePath);
+
+            Task runTask = RunSimulationAsync(fullCsvOutputFilePath);
 
             try
-            {                
-                simEngine.InitializeSimulation();
-                sw.WriteLine("RUN " + DateTime.Now);
+            {
+                await runTask;
+                LogMessage("INFO", "Finished Program");
+            }
+            catch (Exception exc)
+            {
+                LogMessage("INFO", $"Simulation task status is '{runTask.Status}'. Exception message: {exc.Message}");
+                return -1;
+            }
 
+            return 0;
+        }
+
+        static async Task RunSimulationAsync(string csvOutputFile)
+        {
+            SimulatorConfiguration simConfig;
+            SimulatorEngine simEngine;
+            IList<SimulatorEmployeeContact> allEmployeeContacts;
+            SimulatorResult simulatorResult;
+
+            try
+            {
+                simConfig = await CreateConfiguration(false);
+                simEngine = new SimulatorEngine(simConfig);
+                allEmployeeContacts = new List<SimulatorEmployeeContact>();
+                simulatorResult = new SimulatorResult();
+                simEngine.InitializeSimulation();
+            }
+            catch (Exception exc)
+            {
+                LogMessage("ERROR", "Unable to configure and initialize the simulation: " + exc.ToString());
+                throw exc;
+            }
+
+            try
+            {
+                LogMessage("INFO", "Starting simulation.");
                 do
                 {
                     simulatorResult = simEngine.RunNext();
-
-                    sw.WriteLine(simEngine.SimulatorDateTime + " Infected: " + (from e in simConfig.Employees
-                                                                                join v in simConfig.VirusStages
-                                                                                on e.VirusStageId equals v.Id
-                                                                                where v.IsInfected
-                                                                                select e).Count() + " Immune: " +
-                                                                                (from e in simConfig.Employees
-                                                                                 join v in simConfig.VirusStages
-                                                                                 on e.VirusStageId equals v.Id
-                                                                                 where v.InfectionStage ==
-                                                                                 SimulatorDataConstant.InfectionStage_Immune
-                                                                                 select e).Count());
                     allEmployeeContacts.AddRange(simulatorResult.EmployeeContacts);
                 }
                 while (!simulatorResult.IsSimulatorComplete && !simulatorResult.HasError);
-
-                sw.WriteLine("Status " + DateTime.Now + " " + !simulatorResult.HasError + " " + simulatorResult.ErrorMessage);
+                LogMessage("DEBUG", "Simulation complete. Creating output CSV file.");
+                await ExportMethods.CreateSimulatorCsvLogAsync(allEmployeeContacts, simConfig.Employees, simConfig.WorkplaceRooms, simConfig.VirusStages, csvOutputFile);
             }
-            finally
+            catch (Exception exc)
             {
-                sw.Close();
+                LogMessage("ERROR", "Unable to complete simulation: " + exc.ToString());
+                throw exc;
             }
-
-            //await ExportMethods.CreateSimulatorCsvLogAsync(allEmployeeContacts, simConfig.Employees, simConfig.WorkplaceRooms, simConfig.VirusStages, csvOutputFile);
-            await ExportMethods.CreateSimulatorCsvLogAsync(allEmployeeContacts.Where(f => f.EmployeeId == allEmployeeContacts[0].EmployeeId).ToList(), simConfig.Employees, simConfig.WorkplaceRooms, simConfig.VirusStages, csvOutputFile2);
-            //await ExportMethods.CreateSimulatorCsvLogAsync(allEmployeeContacts.Where(f => f.EmployeeId == simConfig.Employees.First(e => e.VirusStageId < 5).Id).ToList(), simConfig.Employees, simConfig.WorkplaceRooms, simConfig.VirusStages, csvOutputFile2);
         }
 
         static async Task<SimulatorConfiguration> CreateConfiguration(bool useTestPersonFile)
         {
             EmployeeDataSource employeeDataSource = new EmployeeDataSource("https://api.mockaroo.com/api/f028dfc0", "89c948e0");
-            
+
             SimulatorConfiguration simConfig = SimulatorConfigManager.GetDefaultConfiguration();
-            
+
             simConfig.Employees = await GetEmployeesAsync(employeeDataSource, simConfig.FloorPeopleMapping.Sum(f => f.Value), useTestPersonFile);
 
             // Mark employees who will use break room.
@@ -89,7 +115,7 @@ namespace WorkplaceOutbreakSimulatorConsole
 
             return simConfig;
         }
-       
+
         static async Task<IList<SimulatorEmployee>> GetEmployeesAsync(EmployeeDataSource simDataStore, int count, bool getFromFile)
         {
             string employeesJson = null;
@@ -102,7 +128,7 @@ namespace WorkplaceOutbreakSimulatorConsole
                 }
                 catch (Exception exc)
                 {
-                    Console.WriteLine(exc);
+                    LogMessage("ERROR", "Unable to retrieve a list of employees: " + exc.ToString());
                 }
             }
 
@@ -119,6 +145,62 @@ namespace WorkplaceOutbreakSimulatorConsole
             }
 
             return results;
+        }
+
+        static bool IsInputValid(string[] args)
+        {
+            if (args == null || args.Length != 1 || string.IsNullOrWhiteSpace(args[0]))
+            {
+                LogMessage("ERROR", "Invalid input args. First arg must be the output file location.");
+                return false;
+            }
+
+            return true;
+        }
+
+        static string GetOutputFileName()
+        {
+            return "Workplace_Outbreak_Simulator_" + System.DateTime.Now.ToString("yyyy-MM-dd-hh-mm-ss") + ".csv";
+        }
+
+        /// <summary>
+        /// Make user output location is okay and can write to it.
+        /// </summary>
+        /// <param name="path">Output Folder</param>
+        /// <param name="fileName">Output File Name</param>
+        /// <returns>true if path exists and we can write to it.</returns>
+        static bool IsFileOutputFolderValid(string path, string fileName)
+        {
+            if (!Directory.Exists(path))
+            {
+                LogMessage("ERROR", $"Folder {path} does not exist. Create the folder or select a new output folder.");
+                return false;
+            }
+
+            string output = Path.Combine(path, fileName);
+
+            try
+            {
+                using (FileStream fs = new FileStream(output, FileMode.Create, FileAccess.Write))
+                {
+                    fs.WriteByte(0x00);
+                }
+            }
+            catch (Exception exc)
+            {
+                LogMessage("ERROR", $"Unable to write a file to {path}. Change permissions or select a new output folder: " + exc.Message);
+                return false;
+            }
+
+            // Should be no problem deleting this.
+            File.Delete(output);
+
+            return true;
+        }
+
+        static void LogMessage(string level, string message)
+        {
+            Console.WriteLine($"|{DateTime.Now}|{level}|{message}");
         }
 
     }
