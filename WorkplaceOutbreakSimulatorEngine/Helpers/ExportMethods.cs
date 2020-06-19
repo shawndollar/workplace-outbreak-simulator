@@ -1,9 +1,9 @@
-﻿using CsvHelper;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Dynamic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using WorkplaceOutbreakSimulatorEngine.Models;
 
@@ -26,56 +26,62 @@ namespace WorkplaceOutbreakSimulatorEngine.Helpers
             IList<SimulatorVirusStage> virusStages,
             string outputFile)
         {
-            var dynamicList = new List<dynamic>(contacts.Count);
+            IList<string> lines = new List<string>(contacts.Count);
+
+            int maxContacts = 0;
+
+            string header = "ContactDateTime,EmployeeId,Name,RoomId,RoomType,VirusStatus";
 
             foreach (var contact in contacts)
             {
-                var employee = employees.FirstOrDefault(f => f.Id == contact.EmployeeId);
+                StringBuilder sb = new StringBuilder("");
+                string employeeFullName = employees.FirstOrDefault(f => f.Id == contact.EmployeeId)?.FullName;
                 var virusStage = virusStages.FirstOrDefault(f => f.Id == contact.VirusStageId);
-                var workplaceRoom = rooms.FirstOrDefault(f => f.Id == contact.RoomId);
-                dynamic d = new ExpandoObject();
-                d.ContactDateTime = contact.ContactDateTime;
-                d.EmployeeId = employee?.Id;
-                d.Name = employee?.FullName;
-                // d.Gender = employee?.Gender;
-                d.RoomId = contact.RoomId;
-                d.RoomType = (workplaceRoom == null) ? "None" : workplaceRoom.RoomType;
-                d.VirusStatus = virusStage?.InfectionStage;
-                for (int i = 0; i < contact.EmployeeContacts?.Count; i++)
+                string roomType = (rooms.FirstOrDefault(f => f.Id == contact.RoomId)?.RoomType) ?? "None";
+
+                sb.Append(contact.ContactDateTime);
+                sb.Append(",");
+                sb.Append(contact.EmployeeId);
+                sb.Append(",");
+                sb.Append(employeeFullName);
+                sb.Append(",");
+                sb.Append(contact.RoomId);
+                sb.Append(",");
+                sb.Append(roomType);
+                sb.Append(",");
+                sb.Append(virusStage?.InfectionStage);
+
                 {
-                    var contactEmployee = employees.FirstOrDefault(f => f.Id == contact.EmployeeContacts[i].EmployeeId);
-                    AddDynamicProperty(d, $"Contact{i + 1}", contactEmployee.FullName);
+                    int contactCount = 0;
+                    for (int i = 0; i < contact.EmployeeContacts?.Count; i++)
+                    {
+                        contactCount++;
+                        sb.Append(",");
+                        var contactEmployee = employees.FirstOrDefault(f => f.Id == contact.EmployeeContacts[i].EmployeeId);
+                        sb.Append(contactEmployee.FullName);
+                    }
+                    if (contactCount > maxContacts)
+                    {
+                        maxContacts = contactCount;
+                    }
                 }
-                dynamicList.Add(d);
+
+                lines.Add(sb.ToString());
+            }
+
+            for (int i = 0; i < maxContacts; i++)
+            {
+                header += $",Contact{i}";
             }
 
             using (var writer = new StreamWriter(outputFile))
             {
-                using (var csv = new CsvWriter(writer, CultureInfo.InvariantCulture))
+                await writer.WriteLineAsync(header);
+                foreach (var line in lines)
                 {
-                    await csv.WriteRecordsAsync(dynamicList);
+                    await writer.WriteLineAsync(line);
                 }
             }
         }
-
-        /// <summary>
-        /// Use IDictionary methods of ExpandoObject to add properties.
-        /// </summary>
-        /// <param name="expando">The ExpandObject class to add a property</param>
-        /// <param name="propertyName">The name of the new property.</param>
-        /// <param name="propertyValue">The object of the new property.</param>
-        public static void AddDynamicProperty(ExpandoObject expando, string propertyName, object propertyValue)
-        {
-            var expandoDict = expando as IDictionary<string, object>;
-            if (expandoDict.ContainsKey(propertyName))
-            {
-                expandoDict[propertyName] = propertyValue;
-            }
-            else
-            {
-                expandoDict.Add(propertyName, propertyValue);
-            }
-        }
-
     }
 }

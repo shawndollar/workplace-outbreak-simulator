@@ -5,8 +5,4 @@
     <Version>2020.6.18.1</Version>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="CsvHelper" Version="15.0.5" />
-  </ItemGroup>
-
 </Project>
