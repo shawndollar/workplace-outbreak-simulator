@@ -127,6 +127,8 @@ namespace WorkplaceOutbreakSimulatorEngine
                 // Now retrieve all employees in the same room (except the employee herself).
                 var contactedEmployees = Configuration.Employees.Where(f => !f.IsOutSick && f.CurrentRoomId == currentEmployee.Employee.CurrentRoomId && f.Id != currentEmployee.Employee.Id);
                 bool isEmployeeContagious = IsVirusStageContagious(currentEmployee.Employee.VirusStageId);
+                bool isRoomContagious = IsRoomContagious(currentEmployee.Employee.CurrentRoomId.GetValueOrDefault());
+
                 // Loop through each contacted contacted employee.
                 foreach (var contactedEmployee in contactedEmployees)
                 {
@@ -134,7 +136,7 @@ namespace WorkplaceOutbreakSimulatorEngine
                     currentEmployee.EmployeeContact.EmployeeContacts.Add(GetEmployeeContactFromEmployee(contactedEmployee));
 
                     // If the employee is contagious and the contact is well, then check to see if an infection occurred.
-                    if (isEmployeeContagious && IsVirusStageWell(contactedEmployee.VirusStageId))
+                    if (isRoomContagious && isEmployeeContagious && IsVirusStageWell(contactedEmployee.VirusStageId))
                     {
                         // Check to see if infection caused (random).
                         if (IsContactInfectious())
@@ -169,7 +171,7 @@ namespace WorkplaceOutbreakSimulatorEngine
         /// <param name="testRate">The virus test rate.</param>
         /// <param name="testResultTime">The time to wait for test results.</param>
         /// <param name="recoveryDays">The recovery days (time off of work).</param>
-        public void UpdateConfiguration(DateTime? startDate, DateTime? endDate, decimal? infectionRate, decimal? testRate, TimeSpan? testResultTime, int? recoveryDays)
+        public void UpdateConfiguration(DateTime? startDate, DateTime? endDate, decimal? infectionRate, decimal? testRate, TimeSpan? testResultTime, int? recoveryDays, bool canGetSickInOffice = true)
         {
             if (startDate != null)
             {
@@ -195,6 +197,8 @@ namespace WorkplaceOutbreakSimulatorEngine
             {
                 Configuration.Virus.RecoveryDays = recoveryDays.Value;
             }
+
+            Configuration.CanGetSickInOffice = canGetSickInOffice;
         }
 
         public void UpdateConfiguration(SimulatorConfiguration configuration)
@@ -470,6 +474,25 @@ namespace WorkplaceOutbreakSimulatorEngine
         {
             var virusStage = Configuration.VirusStages.FirstOrDefault(f => f.Id == virusStageId);
             return virusStage != null && virusStage.IsContagious;
+        }
+
+        /// <summary>
+        /// This determines if the room is contagious. Only the offices may or may not be contagious.
+        /// </summary>
+        /// <param name="roomType">The type of room.</param>
+        /// <returns>True if virus can spread in this room.</returns>
+        private bool IsRoomContagious(int roomId)
+        {
+            // If they can get it in office, they can get it anywhere.
+            if (Configuration.CanGetSickInOffice)
+            {
+                return true;
+            }
+
+            string roomType = Configuration.WorkplaceRooms.FirstOrDefault(f => f.Id == roomId)?.RoomType;
+
+            // It can be spread in any room other than an office.
+            return roomType != SimulatorDataConstant.WorkplaceRoomType_Office;
         }
 
         /// <summary>

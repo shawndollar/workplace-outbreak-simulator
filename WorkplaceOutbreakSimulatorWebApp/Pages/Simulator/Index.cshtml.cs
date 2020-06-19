@@ -163,7 +163,8 @@ namespace WorkplaceOutbreakSimulatorWebApp.Pages.Simulator
                Convert.ToDecimal(SimulatorData.InfectionRate) / 100,
                Convert.ToDecimal(SimulatorData.TestRate) / 100,
                new TimeSpan(SimulatorData.TestResultWaitDays.Value, SimulatorData.TestResultWaitHours.Value, 0, 0),
-               SimulatorData.RequiredSickLeaveDays);
+               SimulatorData.RequiredSickLeaveDays,
+               _simulatorEngine.Configuration.CanGetSickInOffice);
 
             IList<SimulatorEmployee> employees;
 

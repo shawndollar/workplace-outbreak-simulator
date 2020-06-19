@@ -54,5 +54,7 @@ namespace WorkplaceOutbreakSimulatorEngine
 
         public IList<SimulatorVirusStage> VirusStages { get; set; } = new List<SimulatorVirusStage>();
 
+        public bool CanGetSickInOffice { get; set; }
+
     }
 }

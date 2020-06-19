@@ -76,6 +76,8 @@ namespace WorkplaceOutbreakSimulatorEngine.DataRepository
             // Just leave empty for now.
             configuration.Employees = new List<SimulatorEmployee>();
 
+            configuration.CanGetSickInOffice = false;
+
             return configuration;
         }
 

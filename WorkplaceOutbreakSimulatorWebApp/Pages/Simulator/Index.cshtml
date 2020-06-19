@@ -16,12 +16,9 @@
     }
 }
 
-<br />
-<a class="navbar-brand" asp-area="" asp-page="/"><h2 class="text-info">@Model.PageTitle</h2></a>
-<br />
-<br />
+<div class="border container px-5 pt-4 pb-5 ">
 
-<div class="border container" style="padding:30px;">
+    <h2 class="text-info">@Model.PageTitle</h2>
 
     <form id="main_run_form" method="post">
         <input type="hidden"
@@ -84,4 +81,9 @@
             </div>
         </div>
     </form>
+
 </div>
+
+@section Scripts{
+    <script src="@Url.Content("~/js/simulator.index.js")"></script>
+}
