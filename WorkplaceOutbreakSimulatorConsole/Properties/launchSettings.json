@@ -1,8 +1,7 @@
 {
   "profiles": {
     "WorkplaceOutbreakSimulatorConsole": {
-      "commandName": "Project",
-      "commandLineArgs": "C:\\Users\\ShawnLimited\\Desktop\\"
+      "commandName": "Project"
     }
   }
 }
