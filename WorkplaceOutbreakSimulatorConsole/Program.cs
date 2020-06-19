@@ -1,22 +1,15 @@
-﻿using System;
-using System.Collections;
+﻿using Microsoft.Extensions.Configuration;
+using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Text.Json;
 using System.Threading.Tasks;
 using WorkplaceOutbreakSimulatorEngine;
 using WorkplaceOutbreakSimulatorEngine.DataRepository;
-using WorkplaceOutbreakSimulatorEngine.Models;
-using System.Text.Json;
-using System.Linq;
-using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices.ComTypes;
-using System.IO;
 using WorkplaceOutbreakSimulatorEngine.Helpers;
-using CsvHelper;
-using System.Globalization;
-using System.Dynamic;
-using System.ComponentModel.DataAnnotations;
-using System.Threading;
+using WorkplaceOutbreakSimulatorEngine.Models;
 
 namespace WorkplaceOutbreakSimulatorConsole
 {
@@ -41,9 +34,11 @@ namespace WorkplaceOutbreakSimulatorConsole
 
             string fullCsvOutputFilePath = Path.GetFullPath(Path.Combine(outputFileLocation, csvOutputFile));
 
+            AppSettings appSettings = GetAppSettings();
+
             LogMessage("INFO", fullCsvOutputFilePath);
 
-            Task runTask = RunSimulationAsync(fullCsvOutputFilePath);
+            Task runTask = RunSimulationAsync(fullCsvOutputFilePath, appSettings);
 
             try
             {
@@ -59,7 +54,7 @@ namespace WorkplaceOutbreakSimulatorConsole
             return 0;
         }
 
-        static async Task RunSimulationAsync(string csvOutputFile)
+        static async Task RunSimulationAsync(string csvOutputFile, AppSettings appSettings)
         {
             SimulatorConfiguration simConfig;
             SimulatorEngine simEngine;
@@ -68,7 +63,7 @@ namespace WorkplaceOutbreakSimulatorConsole
 
             try
             {
-                simConfig = await CreateConfiguration(false);
+                simConfig = await CreateConfiguration(appSettings);
                 simEngine = new SimulatorEngine(simConfig);
                 allEmployeeContacts = new List<SimulatorEmployeeContact>();
                 simulatorResult = new SimulatorResult();
@@ -99,13 +94,13 @@ namespace WorkplaceOutbreakSimulatorConsole
             }
         }
 
-        static async Task<SimulatorConfiguration> CreateConfiguration(bool useTestPersonFile)
+        static async Task<SimulatorConfiguration> CreateConfiguration(AppSettings appSettings)
         {
-            EmployeeDataSource employeeDataSource = new EmployeeDataSource("https://api.mockaroo.com/api/f028dfc0", "89c948e0");
+            EmployeeDataSource employeeDataSource = new EmployeeDataSource(appSettings.EmployeeApiUri, appSettings.EmployeeApiKey);
 
             SimulatorConfiguration simConfig = SimulatorConfigManager.GetDefaultConfiguration();
 
-            simConfig.Employees = await GetEmployeesAsync(employeeDataSource, simConfig.FloorPeopleMapping.Sum(f => f.Value), useTestPersonFile);
+            simConfig.Employees = await GetEmployeesAsync(employeeDataSource, simConfig.FloorPeopleMapping.Sum(f => f.Value));
 
             // Mark employees who will use break room.
             SimulatorConfigManager.SetEmployeesBreakroomUse(simConfig, .25m);
@@ -116,33 +111,32 @@ namespace WorkplaceOutbreakSimulatorConsole
             return simConfig;
         }
 
-        static async Task<IList<SimulatorEmployee>> GetEmployeesAsync(EmployeeDataSource simDataStore, int count, bool getFromFile)
+        /// <summary>
+        /// Get our random employees from employee source.
+        /// </summary>
+        /// <param name="simDataStore">The employee data source.</param>
+        /// <param name="count">The number of employees to get.</param>
+        /// <returns>List of employees.</returns>
+        static async Task<IList<SimulatorEmployee>> GetEmployeesAsync(EmployeeDataSource simDataStore, int count)
         {
             string employeesJson = null;
 
-            if (!getFromFile)
+            try
             {
-                try
-                {
-                    employeesJson = await simDataStore.GetEmployeesAsync(530);
-                }
-                catch (Exception exc)
-                {
-                    LogMessage("ERROR", "Unable to retrieve a list of employees: " + exc.ToString());
-                }
+                employeesJson = await simDataStore.GetEmployeesAsync(530);
             }
-
-            if (string.IsNullOrWhiteSpace(employeesJson))
+            catch (HttpRequestException exc)
             {
-                employeesJson = await simDataStore.GetEmployeesFromFileAsync(@"C:\projects\repos\workplace-outbreak-simulator-repo\employees.json");
+                LogMessage("ERROR", "HTTP Request exception. Unable to retrieve a list of employees: " + exc.ToString());
+                throw;
+            }
+            catch (Exception exc)
+            {
+                LogMessage("ERROR", "Unable to retrieve a list of employees: " + exc.ToString());
+                throw;
             }
 
             var results = JsonSerializer.Deserialize<IList<SimulatorEmployee>>(employeesJson);
-
-            if (results.Count > count)
-            {
-                results = results.Take(count).ToList();
-            }
 
             return results;
         }
@@ -196,6 +190,28 @@ namespace WorkplaceOutbreakSimulatorConsole
             File.Delete(output);
 
             return true;
+        }
+
+        static AppSettings GetAppSettings()
+        {
+            const string file = "WorkplaceOutbreakSimulatorConsole.settings.json";
+            const string apps = "AppSettings", eds = "EmployeeDataSource";
+            try
+            {
+                var builder = new ConfigurationBuilder()
+                    .SetBasePath(Directory.GetCurrentDirectory())
+                    .AddJsonFile(file);
+                var config = builder.Build();
+                AppSettings settings = new AppSettings();
+                settings.EmployeeApiUri = config.GetSection($"{apps}:{eds}:ApiUri").Value;
+                settings.EmployeeApiKey = config.GetSection($"{apps}:{eds}:ApiKey").Value;
+                return settings;
+            }
+            catch (Exception)
+            {
+                LogMessage("ERROR", $"Unable to find or configure the {file}.");
+                throw;
+            }
         }
 
         static void LogMessage(string level, string message)

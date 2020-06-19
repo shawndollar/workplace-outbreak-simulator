@@ -1,0 +1,8 @@
+{
+  "AppSettings": {
+    "EmployeeDataSource": {
+      "ApiUri": "https://api.mockaroo.com/api/f028dfc0",
+      "ApiKey": "89c948e0"
+    }
+  }
+}
