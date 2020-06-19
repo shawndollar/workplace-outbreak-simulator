@@ -3,7 +3,7 @@ This repository contains applications that simulate a viral outbreak in a workpl
 
 There is one solution called WorkplaceOutbreakSimulator. It contains the following three projects:
 * WorkplaceOutbreakSimulatorEngine - .NET Standard 2.0 class library responsible for all of the simulation and output.
-* WorkplaceOutbreakSimulatorConsole - .NET Core 3.1 console app that will use the default simulator configuration and will write all contact events out to a CSV file.
+* WorkplaceOutbreakSimulatorConsole - .NET Core 3.1 console app that will use the default simulator configuration and will write all contact events out to a CSV file. Output folder should be specified as first command line arg.
 * WorkplaceOutbreakSimulatorWebApp - .NET Core 3.1 ASP.NET Web with Razor Pages app that allows you to run the simulation for various configurations and download the contact event logs for employees one at a time (for faster simulations and smaller logs).
 
 #### The simulator uses the following parameters:
