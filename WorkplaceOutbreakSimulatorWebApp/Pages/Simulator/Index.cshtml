@@ -71,7 +71,7 @@
         <br />
         <div class="form-row">
             <div class="col-4">
-                <input id="main_run_btn" type="submit" value="Run Outbreak Simulation" class="btn btn-primary form-control" @DisableRunButton />
+                <input id="main_run_btn" type="submit" onclick="this.form.submit(); disableInput();" value="Run Outbreak Simulation" class="btn btn-primary form-control" @DisableRunButton />
             </div>
             <div class="col-4">
                 <a asp-page="Index" class="btn btn-secondary form-control">Reset Form</a>
