@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using WorkplaceOutbreakSimulatorEngine.DataRepository;
+using WorkplaceOutbreakSimulatorEngine.Helpers;
 using WorkplaceOutbreakSimulatorEngine.Models;
 
 namespace WorkplaceOutbreakSimulatorEngine
@@ -51,6 +52,8 @@ namespace WorkplaceOutbreakSimulatorEngine
             private set => _dataIntervalDuringWorkDayCount = value;
         }
 
+        public IList<SimulatorEmployeeContact> EmployeeContacts { get; private set; }
+
         #endregion Properties
 
         #region Methods
@@ -60,6 +63,7 @@ namespace WorkplaceOutbreakSimulatorEngine
         /// </summary>
         public void InitializeSimulation()
         {
+            EmployeeContacts = new List<SimulatorEmployeeContact>();
             DataIntervalDuringWorkDayCount = 0;
             DataIntervalTotalCount = 0;
             SimulatorDateTime = Configuration.StartDateTime;
@@ -88,6 +92,7 @@ namespace WorkplaceOutbreakSimulatorEngine
                     {
                         result.EmployeeContacts = SimulateEmployeeContacts();
                     }
+                    EmployeeContacts.AddRange(result.EmployeeContacts);
                     AdvanceSimulatorDateTime();
                 }
 

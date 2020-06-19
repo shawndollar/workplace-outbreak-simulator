@@ -2,6 +2,18 @@
 @model WorkplaceOutbreakSimulatorWebApp.Pages.Simulator.IndexModel
 @{
     ViewData["Title"] = Model.PageTitle;
+
+    string DisableRunButton = "";
+    if (Model.SimulatorData.IsSimulatorRunning || Model.SimulatorData.IsSimulatorComplete)
+    {
+        DisableRunButton = "disabled";
+    }
+
+    string DisableDownloadButton = "";
+    if (!Model.SimulatorData.IsSimulatorComplete)
+    {
+        DisableDownloadButton = "disabled";
+    }
 }
 
 <br />
@@ -12,57 +24,64 @@
 <div class="border container" style="padding:30px;">
 
     <form method="post">
+        <input type="hidden"
+               id="SimulatorData.IsSimulatorRunning"
+               name="SimulatorData.IsSimulatorRunning"
+               value="@Model.SimulatorData.IsSimulatorRunning.ToString().ToLower()">
+        <input type="hidden"
+               id="SimulatorData.IsSimulatorComplete"
+               name="SimulatorData.IsSimulatorComplete"
+               value="@Model.SimulatorData.IsSimulatorComplete.ToString().ToLower()">
         <div class="text-danger" asp-validation-summary="All"></div>
         <div class="form-row">
             <div class="form-group col-md-3">
-                <label asp-for="SimulatorVM.SimulatorInput.StartDate"></label>
-                <input asp-for="SimulatorVM.SimulatorInput.StartDate" class="form-control" />
+                <label asp-for="SimulatorData.SimulatorInput.StartDate"></label>
+                <input asp-for="SimulatorData.SimulatorInput.StartDate" class="form-control" />
             </div>
             <div class="form-group col-md-3">
-                <label asp-for="SimulatorVM.SimulatorInput.EndDate"></label>
-                <input asp-for="SimulatorVM.SimulatorInput.EndDate" class="form-control" />
-            </div>
-        </div>
-        <div class="form-row">
-            <div class="form-group col-md-3">
-                <label asp-for="SimulatorVM.SimulatorInput.InfectionRate"></label>
-                <input type="number" min="1" max="100" asp-for="SimulatorVM.SimulatorInput.InfectionRate" class="form-control" />
-            </div>
-            <div class="form-group col-md-3">
-                <label asp-for="SimulatorVM.SimulatorInput.TestRate"></label>
-                <input type="number" min="0" max="100" asp-for="SimulatorVM.SimulatorInput.TestRate" class="form-control" />
-            </div>
-            <div class="form-group col-md-3">
-                <label asp-for="SimulatorVM.SimulatorInput.TestResultWaitDays"></label>
-                <input type="number" min="0" max="31" asp-for="SimulatorVM.SimulatorInput.TestResultWaitDays" class="form-control" />
-            </div>
-            <div class="form-group col-md-3">
-                <label asp-for="SimulatorVM.SimulatorInput.TestResultWaitHours"></label>
-                <input type="number" min="0" max="23" asp-for="SimulatorVM.SimulatorInput.TestResultWaitHours" class="form-control" />
+                <label asp-for="SimulatorData.SimulatorInput.EndDate"></label>
+                <input asp-for="SimulatorData.SimulatorInput.EndDate" class="form-control" />
             </div>
         </div>
         <div class="form-row">
             <div class="form-group col-md-3">
-                <label asp-for="SimulatorVM.SimulatorInput.RequiredSickLeaveDays"></label>
-                <input type="number" min="5" max="30" asp-for="SimulatorVM.SimulatorInput.RequiredSickLeaveDays" class="form-control" />
+                <label asp-for="SimulatorData.SimulatorInput.InfectionRate"></label>
+                <input type="number" min="1" max="100" asp-for="SimulatorData.SimulatorInput.InfectionRate" class="form-control" />
+            </div>
+            <div class="form-group col-md-3">
+                <label asp-for="SimulatorData.SimulatorInput.TestRate"></label>
+                <input type="number" min="0" max="100" asp-for="SimulatorData.SimulatorInput.TestRate" class="form-control" />
+            </div>
+            <div class="form-group col-md-3">
+                <label asp-for="SimulatorData.SimulatorInput.TestResultWaitDays"></label>
+                <input type="number" min="0" max="31" asp-for="SimulatorData.SimulatorInput.TestResultWaitDays" class="form-control" />
+            </div>
+            <div class="form-group col-md-3">
+                <label asp-for="SimulatorData.SimulatorInput.TestResultWaitHours"></label>
+                <input type="number" min="0" max="23" asp-for="SimulatorData.SimulatorInput.TestResultWaitHours" class="form-control" />
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group col-md-3">
+                <label asp-for="SimulatorData.SimulatorInput.RequiredSickLeaveDays"></label>
+                <input type="number" min="5" max="30" asp-for="SimulatorData.SimulatorInput.RequiredSickLeaveDays" class="form-control" />
+            </div>
+            <div class="form-group col-md-9">
+                <label>Select an Employee File to Download</label>
+                <select class="form-control" asp-for="SimulatorData.SelectedEmployeeIdForExport" asp-items="Model.Employees"></select>
             </div>
         </div>
         <br />
-        <div class="form-group row">
+        <div class="form-row">
             <div class="col-4">
-                <input type="submit" value="Run Outbreak Simulation" class="btn btn-primary form-control" />
+                <input type="submit" value="Run Outbreak Simulation" class="btn btn-primary form-control" @DisableRunButton />
             </div>
             <div class="col-4">
-                <a asp-page="Index" class="btn btn-success form-control">Reset Form</a>
+                <a asp-page="Index" class="btn btn-secondary form-control">Reset Form</a>
+            </div>
+            <div class="col-4">
+                <input type="submit" class="btn btn-success form-control" value="Download Employee Log File" @DisableDownloadButton />
             </div>
         </div>
     </form>
-
-    @if (Model.SimulatorVM.IsSimulatorComplete)
-    {
-        <div class="border container" style="padding:20px;">
-            <h4 class="text-info">Simulation Results</h4>
-        </div>
-    }
-
 </div>

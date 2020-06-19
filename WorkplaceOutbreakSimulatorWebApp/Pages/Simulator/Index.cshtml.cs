@@ -1,10 +1,17 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.WindowsRuntime;
+using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using WorkplaceOutbreakSimulatorEngine;
 using WorkplaceOutbreakSimulatorEngine.DataRepository;
@@ -27,14 +34,20 @@ namespace WorkplaceOutbreakSimulatorWebApp.Pages.Simulator
         #endregion Fields
 
         #region Properties
-
-
+        
         [BindProperty]
-        public SimulatorData SimulatorVM
+        public IList<SelectListItem> Employees
         {
             get;
             set;
-        } = new SimulatorData() { SimulatorInput = new SimulatorInput(), SimulatorOutput = new SimulatorOutput() };
+        } 
+
+        [BindProperty]
+        public SimulatorData SimulatorData
+        {
+            get;
+            set;
+        } = new SimulatorData() { SimulatorInput = new SimulatorInput() };
 
         [BindProperty]
         public string PageTitle { get => _webAppService.WebApplicationTitle; }
@@ -58,16 +71,17 @@ namespace WorkplaceOutbreakSimulatorWebApp.Pages.Simulator
         public async Task OnGet()
         {
             _simulatorEngine.UpdateConfiguration(SimulatorConfigManager.GetDefaultConfiguration());
-            SimulatorVM.IsSimulatorRunning = false;
-            SimulatorVM.IsSimulatorComplete = false;
-            SimulatorVM.SimulatorInput.StartDate = _simulatorEngine.Configuration.StartDateTime;
-            SimulatorVM.SimulatorInput.EndDate = _simulatorEngine.Configuration.EndDateTime;
-            SimulatorVM.SimulatorInput.InfectionRate = Convert.ToInt32((_simulatorEngine.Configuration.Virus.InfectionRate * 100));
-            SimulatorVM.SimulatorInput.TestRate = Convert.ToInt32((_simulatorEngine.Configuration.Virus.TestRate * 100));
+            SimulatorData.IsSimulatorRunning = false;
+            SimulatorData.IsSimulatorComplete = false;
+            SimulatorData.SimulatorInput = new SimulatorInput();
+            SimulatorData.SimulatorInput.StartDate = _simulatorEngine.Configuration.StartDateTime;
+            SimulatorData.SimulatorInput.EndDate = _simulatorEngine.Configuration.EndDateTime;
+            SimulatorData.SimulatorInput.InfectionRate = Convert.ToInt32((_simulatorEngine.Configuration.Virus.InfectionRate * 100));
+            SimulatorData.SimulatorInput.TestRate = Convert.ToInt32((_simulatorEngine.Configuration.Virus.TestRate * 100));
             TimeSpan ts = _simulatorEngine.Configuration.Virus.TestResultWaitTime;
-            SimulatorVM.SimulatorInput.TestResultWaitDays = ts.Days;
-            SimulatorVM.SimulatorInput.TestResultWaitHours = ts.Hours;
-            SimulatorVM.SimulatorInput.RequiredSickLeaveDays = _simulatorEngine.Configuration.Virus.RecoveryDays;            
+            SimulatorData.SimulatorInput.TestResultWaitDays = ts.Days;
+            SimulatorData.SimulatorInput.TestResultWaitHours = ts.Hours;
+            SimulatorData.SimulatorInput.RequiredSickLeaveDays = _simulatorEngine.Configuration.Virus.RecoveryDays;
             await Task.CompletedTask;
         }
 
@@ -78,74 +92,121 @@ namespace WorkplaceOutbreakSimulatorWebApp.Pages.Simulator
                 return Page();
             }
 
-            SimulatorVM.IsSimulatorComplete = false;
-            SimulatorVM.IsSimulatorRunning = true;
-            
-            await RunSimulationAsync();
+            if (SimulatorData.IsSimulatorComplete)
+            {
+                SimulatorData.IsSimulatorComplete = true;
+                SimulatorData.IsSimulatorRunning = false;
+                return await OnDownloadFile();
+            }
+            else
+            {
+                SimulatorData.IsSimulatorComplete = false;
+                SimulatorData.IsSimulatorRunning = true;
 
-            SimulatorVM.IsSimulatorRunning = false;
-            SimulatorVM.IsSimulatorComplete = true;
+                SimulatorResult simulatorResult = await RunSimulationAsync();
+                                
+                SimulatorData.IsSimulatorRunning = false;
+                SimulatorData.IsSimulatorComplete = true;
 
-            return Page();
+                if (simulatorResult.HasError)
+                {
+                    // Handle error.
+                    SimulatorData.IsSimulatorComplete = false;
+                }
+                else
+                {
+                    SimulatorData.IsSimulatorComplete = true;
+                }
+
+                Employees = GetEmployeeSelectList(_simulatorEngine.Configuration.Employees);
+
+                return Page();
+            }
+        }
+        
+        public async Task<IActionResult> OnDownloadFile()
+        {
+            int selectedEmployeeId = _simulatorEngine.Configuration.Employees.FirstOrDefault(f => f.Id == Int32.Parse(SimulatorData.SelectedEmployeeIdForExport)).Id;
+            string path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Temp");
+            string file = "Workplace_Outbreak_Sim_" + _simulatorEngine.Configuration.Employees.FirstOrDefault(f => f.Id == selectedEmployeeId).FullName + ".csv";
+            file = FixFileName(file);            
+
+            // Get the data file.
+            await WorkplaceOutbreakSimulatorEngine.Helpers.ExportMethods.CreateSimulatorCsvLogAsync(
+                _simulatorEngine.EmployeeContacts.Where(f => f.EmployeeId == selectedEmployeeId).ToList(),
+                _simulatorEngine.Configuration.Employees,
+                _simulatorEngine.Configuration.WorkplaceRooms,
+                _simulatorEngine.Configuration.VirusStages,
+                Path.Combine(path, file));
+            return File(new FileStream(Path.Combine(path, file), FileMode.Open), "application/csv", file);
         }
 
         #endregion Handlers
 
         #region Private Methods
 
+        private IList<SelectListItem> GetEmployeeSelectList(IList<SimulatorEmployee> employees)
+        {
+            var dict = new Dictionary<int, string>(from e in employees
+                                                   select new KeyValuePair<int, string>(e.Id, e.FullName)).OrderBy(f => f.Value);
+            return (from e in employees
+                    select new SelectListItem
+                    {
+                        Value = e.Id.ToString(),
+                        Text = e.FullName
+                    }).OrderBy(f => f.Text).ToList();
+        }
+
         private async Task<SimulatorResult> RunSimulationAsync()
         {
-            _simulatorEngine.UpdateConfiguration(SimulatorVM.SimulatorInput.StartDate,
-               SimulatorVM.SimulatorInput.EndDate,
-               Convert.ToDecimal(SimulatorVM.SimulatorInput.InfectionRate) / 100,
-               Convert.ToDecimal(SimulatorVM.SimulatorInput.TestRate) / 100,
-               new TimeSpan(SimulatorVM.SimulatorInput.TestResultWaitDays.Value, SimulatorVM.SimulatorInput.TestResultWaitHours.Value, 0, 0),
-               SimulatorVM.SimulatorInput.RequiredSickLeaveDays);
+            _simulatorEngine.UpdateConfiguration(SimulatorData.SimulatorInput.StartDate,
+               SimulatorData.SimulatorInput.EndDate,
+               Convert.ToDecimal(SimulatorData.SimulatorInput.InfectionRate) / 100,
+               Convert.ToDecimal(SimulatorData.SimulatorInput.TestRate) / 100,
+               new TimeSpan(SimulatorData.SimulatorInput.TestResultWaitDays.Value, SimulatorData.SimulatorInput.TestResultWaitHours.Value, 0, 0),
+               SimulatorData.SimulatorInput.RequiredSickLeaveDays);
 
-            var employees = await GetEmployeesAsync(_simulatorEngine.Configuration.TotalPeople, false);
+            IList<SimulatorEmployee> employees;
 
-            _simulatorEngine.Configuration.Employees = employees;
+            if (_simulatorEngine.Configuration.Employees?.Count == 0)
+            {
+                employees = await RetrieveSimulatorEmployees(_simulatorEngine.Configuration.TotalPeople);
+                _simulatorEngine.Configuration.Employees = employees;
+            }
+            else
+            {
+                employees = _simulatorEngine.Configuration.Employees;
+            }
 
             // Mark employees who will use break room.
             SimulatorConfigManager.SetEmployeesBreakroomUse(_simulatorEngine.Configuration, .25m);
 
             // This should be done last before running.
             SimulatorConfigManager.AssignEmployeesToOffices(_simulatorEngine.Configuration);
-
+            
             return await Task<SimulatorResult>.Run(() =>
             {
                 return RunSimulation(_simulatorEngine);
             });
         }
-
-        private async Task<IList<SimulatorEmployee>> GetEmployeesAsync(int count, bool getFromFile)
+        
+        private async Task<IList<SimulatorEmployee>> RetrieveSimulatorEmployees(int count)
         {
-            string employeesJson = null;
-
-            if (!getFromFile)
+            // If already have employees, then don't get more.
+            if (_simulatorEngine.Configuration.Employees?.Count == count)
             {
-                try
-                {
-                    employeesJson = await _employeeDataSource.GetEmployeesAsync(count);
-                }
-                catch (Exception exc)
-                {
-                    Console.WriteLine(exc);
-                }
+                return _simulatorEngine.Configuration.Employees;
             }
-
-            if (string.IsNullOrWhiteSpace(employeesJson))
+            else
             {
-                employeesJson = await _employeeDataSource.GetEmployeesFromFileAsync(@"C:\projects\repos\workplace-outbreak-simulator-repo\employees.json");
+                return await GetNewEmployeesAsync(count);
             }
+        }
 
-            var results = JsonSerializer.Deserialize<IList<SimulatorEmployee>>(employeesJson);
-
-            if (results.Count > count)
-            {
-                results = results.Take(count).ToList();
-            }
-
+        private async Task<IList<SimulatorEmployee>> GetNewEmployeesAsync(int count)
+        {
+            string employeesJson = await _employeeDataSource.GetEmployeesAsync(count);            
+            var results = JsonSerializer.Deserialize<List<SimulatorEmployee>>(employeesJson);
             return results;
         }
         
@@ -170,6 +231,24 @@ namespace WorkplaceOutbreakSimulatorWebApp.Pages.Simulator
             }
             while (!simulatorResult.IsSimulatorComplete && !simulatorResult.HasError);
             return simulatorResult;
+        }
+
+        /// <summary>
+        /// Clean up file name to make sure it's valid.
+        /// </summary>
+        /// <param name="filename">The Faw file name.</param>
+        /// <returns>File name without illegal and unwanted characters.</returns>
+        private string FixFileName(string filename)
+        {
+            var invalids = Path.GetInvalidFileNameChars().Concat(new char[] { ' ' });
+            return string.Join("_", filename.Split(invalids.ToArray()));
+        }
+
+        private SimulatorConfiguration GetDefaultConfigWithExistingEmployees(SimulatorConfiguration configuration)
+        {
+            SimulatorConfiguration newConfig = SimulatorConfigManager.GetDefaultConfiguration();
+            newConfig.Employees = configuration.Employees;
+            return newConfig;
         }
 
         #endregion Private Methods
