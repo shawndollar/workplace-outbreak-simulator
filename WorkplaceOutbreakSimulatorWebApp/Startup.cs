@@ -41,9 +41,9 @@ namespace WorkplaceOutbreakSimulatorWebApp
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddRazorPages();
-            services.AddSingleton<IEmployeeDataSource>(GetEmployeeDataSourceInstance());
-            services.AddSingleton<IWebAppService, WebAppService>();
-            services.AddSingleton<SimulatorEngine>(GetSimulatorEngineInstance());
+            services.AddTransient<IEmployeeDataSource>(f => GetEmployeeDataSourceInstance());
+            services.AddTransient<IWebAppService, WebAppService>();
+            services.AddSingleton<SimulatorEngine>(GetSimulatorEngineInstance());            
         }
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
