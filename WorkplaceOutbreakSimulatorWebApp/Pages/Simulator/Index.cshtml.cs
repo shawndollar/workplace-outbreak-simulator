@@ -47,7 +47,7 @@ namespace WorkplaceOutbreakSimulatorWebApp.Pages.Simulator
         {
             get;
             set;
-        } = new SimulatorData() { SimulatorInput = new SimulatorInput() };
+        } = new SimulatorData();
 
         [BindProperty]
         public string PageTitle { get => _webAppService.WebApplicationTitle; }
@@ -73,15 +73,14 @@ namespace WorkplaceOutbreakSimulatorWebApp.Pages.Simulator
             _simulatorEngine.UpdateConfiguration(SimulatorConfigManager.GetDefaultConfiguration());
             SimulatorData.IsSimulatorRunning = false;
             SimulatorData.IsSimulatorComplete = false;
-            SimulatorData.SimulatorInput = new SimulatorInput();
-            SimulatorData.SimulatorInput.StartDate = _simulatorEngine.Configuration.StartDateTime;
-            SimulatorData.SimulatorInput.EndDate = _simulatorEngine.Configuration.EndDateTime;
-            SimulatorData.SimulatorInput.InfectionRate = Convert.ToInt32((_simulatorEngine.Configuration.Virus.InfectionRate * 100));
-            SimulatorData.SimulatorInput.TestRate = Convert.ToInt32((_simulatorEngine.Configuration.Virus.TestRate * 100));
+            SimulatorData.StartDate = _simulatorEngine.Configuration.StartDateTime;
+            SimulatorData.EndDate = _simulatorEngine.Configuration.EndDateTime;
+            SimulatorData.InfectionRate = Convert.ToInt32((_simulatorEngine.Configuration.Virus.InfectionRate * 100));
+            SimulatorData.TestRate = Convert.ToInt32((_simulatorEngine.Configuration.Virus.TestRate * 100));
             TimeSpan ts = _simulatorEngine.Configuration.Virus.TestResultWaitTime;
-            SimulatorData.SimulatorInput.TestResultWaitDays = ts.Days;
-            SimulatorData.SimulatorInput.TestResultWaitHours = ts.Hours;
-            SimulatorData.SimulatorInput.RequiredSickLeaveDays = _simulatorEngine.Configuration.Virus.RecoveryDays;
+            SimulatorData.TestResultWaitDays = ts.Days;
+            SimulatorData.TestResultWaitHours = ts.Hours;
+            SimulatorData.RequiredSickLeaveDays = _simulatorEngine.Configuration.Virus.RecoveryDays;
             await Task.CompletedTask;
         }
 
@@ -159,12 +158,12 @@ namespace WorkplaceOutbreakSimulatorWebApp.Pages.Simulator
 
         private async Task<SimulatorResult> RunSimulationAsync()
         {
-            _simulatorEngine.UpdateConfiguration(SimulatorData.SimulatorInput.StartDate,
-               SimulatorData.SimulatorInput.EndDate,
-               Convert.ToDecimal(SimulatorData.SimulatorInput.InfectionRate) / 100,
-               Convert.ToDecimal(SimulatorData.SimulatorInput.TestRate) / 100,
-               new TimeSpan(SimulatorData.SimulatorInput.TestResultWaitDays.Value, SimulatorData.SimulatorInput.TestResultWaitHours.Value, 0, 0),
-               SimulatorData.SimulatorInput.RequiredSickLeaveDays);
+            _simulatorEngine.UpdateConfiguration(SimulatorData.StartDate,
+               SimulatorData.EndDate,
+               Convert.ToDecimal(SimulatorData.InfectionRate) / 100,
+               Convert.ToDecimal(SimulatorData.TestRate) / 100,
+               new TimeSpan(SimulatorData.TestResultWaitDays.Value, SimulatorData.TestResultWaitHours.Value, 0, 0),
+               SimulatorData.RequiredSickLeaveDays);
 
             IList<SimulatorEmployee> employees;
 

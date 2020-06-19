@@ -23,7 +23,7 @@
 
 <div class="border container" style="padding:30px;">
 
-    <form method="post">
+    <form id="main_run_form" method="post">
         <input type="hidden"
                id="SimulatorData.IsSimulatorRunning"
                name="SimulatorData.IsSimulatorRunning"
@@ -35,36 +35,36 @@
         <div class="text-danger" asp-validation-summary="All"></div>
         <div class="form-row">
             <div class="form-group col-md-3">
-                <label asp-for="SimulatorData.SimulatorInput.StartDate"></label>
-                <input asp-for="SimulatorData.SimulatorInput.StartDate" class="form-control" />
+                <label asp-for="SimulatorData.StartDate"></label>
+                <input asp-for="SimulatorData.StartDate" class="form-control" />
             </div>
             <div class="form-group col-md-3">
-                <label asp-for="SimulatorData.SimulatorInput.EndDate"></label>
-                <input asp-for="SimulatorData.SimulatorInput.EndDate" class="form-control" />
-            </div>
-        </div>
-        <div class="form-row">
-            <div class="form-group col-md-3">
-                <label asp-for="SimulatorData.SimulatorInput.InfectionRate"></label>
-                <input type="number" min="1" max="100" asp-for="SimulatorData.SimulatorInput.InfectionRate" class="form-control" />
-            </div>
-            <div class="form-group col-md-3">
-                <label asp-for="SimulatorData.SimulatorInput.TestRate"></label>
-                <input type="number" min="0" max="100" asp-for="SimulatorData.SimulatorInput.TestRate" class="form-control" />
-            </div>
-            <div class="form-group col-md-3">
-                <label asp-for="SimulatorData.SimulatorInput.TestResultWaitDays"></label>
-                <input type="number" min="0" max="31" asp-for="SimulatorData.SimulatorInput.TestResultWaitDays" class="form-control" />
-            </div>
-            <div class="form-group col-md-3">
-                <label asp-for="SimulatorData.SimulatorInput.TestResultWaitHours"></label>
-                <input type="number" min="0" max="23" asp-for="SimulatorData.SimulatorInput.TestResultWaitHours" class="form-control" />
+                <label asp-for="SimulatorData.EndDate"></label>
+                <input asp-for="SimulatorData.EndDate" class="form-control" />
             </div>
         </div>
         <div class="form-row">
             <div class="form-group col-md-3">
-                <label asp-for="SimulatorData.SimulatorInput.RequiredSickLeaveDays"></label>
-                <input type="number" min="5" max="30" asp-for="SimulatorData.SimulatorInput.RequiredSickLeaveDays" class="form-control" />
+                <label asp-for="SimulatorData.InfectionRate"></label>
+                <input type="number" min="1" max="100" asp-for="SimulatorData.InfectionRate" class="form-control" />
+            </div>
+            <div class="form-group col-md-3">
+                <label asp-for="SimulatorData.TestRate"></label>
+                <input type="number" min="0" max="100" asp-for="SimulatorData.TestRate" class="form-control" />
+            </div>
+            <div class="form-group col-md-3">
+                <label asp-for="SimulatorData.TestResultWaitDays"></label>
+                <input type="number" min="0" max="31" asp-for="SimulatorData.TestResultWaitDays" class="form-control" />
+            </div>
+            <div class="form-group col-md-3">
+                <label asp-for="SimulatorData.TestResultWaitHours"></label>
+                <input type="number" min="0" max="23" asp-for="SimulatorData.TestResultWaitHours" class="form-control" />
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group col-md-3">
+                <label asp-for="SimulatorData.RequiredSickLeaveDays"></label>
+                <input type="number" min="5" max="30" asp-for="SimulatorData.RequiredSickLeaveDays" class="form-control" />
             </div>
             <div class="form-group col-md-9">
                 <label>Select an Employee File to Download</label>
@@ -74,13 +74,13 @@
         <br />
         <div class="form-row">
             <div class="col-4">
-                <input type="submit" value="Run Outbreak Simulation" class="btn btn-primary form-control" @DisableRunButton />
+                <input id="main_run_btn" type="submit" value="Run Outbreak Simulation" class="btn btn-primary form-control" @DisableRunButton />
             </div>
             <div class="col-4">
                 <a asp-page="Index" class="btn btn-secondary form-control">Reset Form</a>
             </div>
             <div class="col-4">
-                <input type="submit" class="btn btn-success form-control" value="Download Employee Log File" @DisableDownloadButton />
+                <input id="main_download_btn" type="submit" class="btn btn-success form-control" value="Download Employee Log File" @DisableDownloadButton />
             </div>
         </div>
     </form>
