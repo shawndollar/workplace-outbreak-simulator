@@ -74,7 +74,7 @@
                 <input id="main_run_btn" type="submit" onclick="this.form.submit(); disableInput();" value="Run Simulation" class="btn btn-primary form-control" @DisableRunButton />
             </div>
             <div class="col-4">
-                <a asp-page="Index" class="btn btn-secondary form-control">Reset Form</a>
+                <a asp-page="Index" class="btn btn-secondary form-control" onclick="return confirm('Are you sure you want to clear this simulation?');">Reset Form</a>
             </div>
             <div class="col-4">
                 <input id="main_download_btn" type="submit" class="btn btn-success form-control" value="Download Employee Log File" @DisableDownloadButton />
