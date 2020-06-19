@@ -48,6 +48,10 @@ namespace WorkplaceOutbreakSimulatorWebApp.Model
         {
             get
             {
+                if (StartDate == null || EndDate == null)
+                {
+                    return 0;
+                }
                 return StartDate > EndDate ? 0 : 1;
             }
         }
