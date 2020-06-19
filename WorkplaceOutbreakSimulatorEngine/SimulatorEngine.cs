@@ -124,9 +124,12 @@ namespace WorkplaceOutbreakSimulatorEngine
                                              where !e.IsOutSick
                                              select new { Employee = e, EmployeeContact = ec }))
             {
+                // Only check once per contact for each employee.
+                bool hasEmployeeBeenChecked = false;
+
                 // Now retrieve all employees in the same room (except the employee herself).
                 var contactedEmployees = Configuration.Employees.Where(f => !f.IsOutSick && f.CurrentRoomId == currentEmployee.Employee.CurrentRoomId && f.Id != currentEmployee.Employee.Id);
-                bool isEmployeeContagious = IsVirusStageContagious(currentEmployee.Employee.VirusStageId);
+                bool isEmployeeWell = IsVirusStageWell(currentEmployee.Employee.VirusStageId);
                 bool isRoomContagious = IsRoomContagious(currentEmployee.Employee.CurrentRoomId.GetValueOrDefault());
 
                 // Loop through each contacted contacted employee.
@@ -135,15 +138,17 @@ namespace WorkplaceOutbreakSimulatorEngine
                     // Always add each contacted employee to the employee's employee contact list.
                     currentEmployee.EmployeeContact.EmployeeContacts.Add(GetEmployeeContactFromEmployee(contactedEmployee));
 
-                    // If the employee is contagious and the contact is well, then check to see if an infection occurred.
-                    if (isRoomContagious && isEmployeeContagious && IsVirusStageWell(contactedEmployee.VirusStageId))
+                    // If the room is contagious and the employee is well adn the contact is contagious, then check to see if an infection occurred.
+                    // BUT only check each employee once per hour. Meeting with 1 people or 10 people should give same possible infection rate.
+                    if (!hasEmployeeBeenChecked && isRoomContagious && isEmployeeWell && IsVirusStageContagious(contactedEmployee.VirusStageId))
                     {
                         // Check to see if infection caused (random).
                         if (IsContactInfectious())
                         {
                             // Set infected employee to infected stage.
-                            SetEmployeeVirusStage(contactedEmployee, infectedStage);
+                            SetEmployeeVirusStage(currentEmployee.Employee, infectedStage);
                         }
+                        hasEmployeeBeenChecked = true;
                     }
                 }
             }
