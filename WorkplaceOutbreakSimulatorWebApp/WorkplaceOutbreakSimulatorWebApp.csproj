@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <CopyRefAssembliesToPublishDirectory>false</CopyRefAssembliesToPublishDirectory>
-    <Version>2020.6.18.1</Version>
+    <Version>2020.6.19.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
