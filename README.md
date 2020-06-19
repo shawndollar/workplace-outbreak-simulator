@@ -45,4 +45,8 @@ There is one solution called WorkplaceOutbreakSimulator. It contains the followi
 
 #### External API(s)
 
-The employee data is retrieved from https://mockaroo.com. You can quickly create a free account and get an API Key and update the app settings files. I can provide an API key if necessary. The free account allows for 200 requests every 24 hours.
+The employee data is retrieved from https://mockaroo.com. You can quickly create a free account and get an API Key and update the app settings files, if necessary. The free account allows for 200 requests every 24 hours.
+
+#### Performance
+
+A full 4 month simulation can take about 2 minutes, and the full output file can be large - approximately 115 MB.
